@@ -309,7 +309,7 @@ const methods = {
 			if (a.link_host !== null)        uci.set('tgws', 'settings', 'link_host', a.link_host || '');
 			if (a.cf_enabled !== null)       uci.set('tgws', 'settings', 'cf_enabled', a.cf_enabled ? '1' : '0');
 			if (a.cf_priority !== null)      uci.set('tgws', 'settings', 'cf_priority', a.cf_priority ? '1' : '0');
-			if (a.cf_domain !== null)        uci.set('tgws', 'settings', 'cf_domain', a.cf_domain || '');
+			/* cf_domain is managed by the watchdog only — never save it from the form */
 			if (a.cf_worker_domain !== null) uci.set('tgws', 'settings', 'cf_worker_domain', a.cf_worker_domain || '');
 			if (a.buf_kb !== null)           uci.set('tgws', 'settings', 'buf_kb', a.buf_kb || '256');
 			if (a.pool_size !== null)        uci.set('tgws', 'settings', 'pool_size', a.pool_size || '4');

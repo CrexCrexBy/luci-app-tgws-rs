@@ -402,8 +402,9 @@ return view.extend({
 		o.depends('cf_enabled', '1');
 		o = s.taboption('settings', form.Flag, 'cf_balance', _('Balance connections across Cloudflare domains'), _('Round-robin across multiple Cloudflare proxy domains instead of always trying the same one first.'));
 		o.depends('cf_enabled', '1');
-		o = s.taboption('settings', form.Value, 'cf_domain', _('Custom Cloudflare proxy domain'), _('Your own Cloudflare-proxied domain, comma-separated if multiple.'));
+		o = s.taboption('settings', form.Value, 'cf_domain', _('Cloudflare proxy domains (auto)'), _('Automatically filled by the watchdog from its health checks (healthy-then-fallback order). Read-only — to manage manually, stop the watchdog first.'));
 		o.placeholder = 'yourdomain.com';
+		o.readonly = true;
 		o.depends('cf_enabled', '1');
 		o = s.taboption('settings', form.Value, 'cf_worker_domain', _('Cloudflare worker domain'), _('The worker domain used for the Cloudflare route.'));
 		o.depends('cf_enabled', '1');
