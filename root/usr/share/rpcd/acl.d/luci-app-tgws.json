@@ -4,13 +4,14 @@
 		"read": {
 			"ubus": {
 				"luci.tgws": [ "getStatus", "getConfig", "getLink", "getLanIP",
-					"getReleases", "getVersions", "getVersion", "getLogs", "checkUpdate", "getSecret" ]
+					"getReleases", "getVersions", "getVersion", "getLogs", "getWatchdogLogs",
+					"checkUpdate", "getSecret" ]
 			},
 			"uci": [ "tgws" ]
 		},
 		"write": {
 			"ubus": {
-				"luci.tgws": [ "saveConfig", "setAction", "generateSecret",
+				"luci.tgws": [ "saveConfig", "setAction", "setWatchdogAction", "generateSecret",
 					"installVersion", "rollback" ]
 			},
 			"uci": [ "tgws" ],
