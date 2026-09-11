@@ -318,16 +318,17 @@ return view.extend({
 							E('a', { 'href': repoUrl, 'target': '_blank' }, repoUrl)
 						]);
 
+						var descr = [
+							E('strong', {}, _('Telegram WebSocket Proxy')),
+							' — ',
+							_('A Rust-based WebSocket proxy for Telegram with Cloudflare support.'),
+							badges
+						];
+						if (rd.from_cache)
+							descr.push(E('p', { 'style': 'color:#888; margin:4px 0 0;' }, _('Showing cached release list (no internet connection at last check).')));
+
 						dom.content(box, [
-							E('div', { 'class': 'cbi-map-descr' }, [
-								E('strong', {}, _('Telegram WebSocket Proxy')),
-								' — ',
-								_('A Rust-based WebSocket proxy for Telegram with Cloudflare support.'),
-								badges,
-								rd.from_cache
-									? E('p', { 'style': 'color:#888; margin:4px 0 0;' }, _('Showing cached release list (no internet connection at last check).'))
-									: null
-							]),
+							E('div', { 'class': 'cbi-map-descr' }, descr),
 							table,
 							E('div', { 'style': 'text-align:center; margin-top:6px;' }, [ prevBtn, counter, nextBtn ])
 						]);
