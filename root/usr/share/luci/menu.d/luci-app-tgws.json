@@ -1,0 +1,14 @@
+{
+	"admin/services/tgws": {
+		"title": "TG WS Proxy",
+		"order": 95,
+		"action": {
+			"type": "view",
+			"path": "tgws/status"
+		},
+		"depends": {
+			"acl": [ "luci-app-tgws" ],
+			"uci": { "tgws": true }
+		}
+	}
+}

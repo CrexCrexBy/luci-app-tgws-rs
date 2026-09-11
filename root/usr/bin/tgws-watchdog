@@ -1,0 +1,89 @@
+#!/bin/sh
+#
+# tgws-watchdog — health-check for tg-ws-proxy Cloudflare domains.
+# Runs periodically from cron. Probes every CF domain via `--check`,
+# writes only the healthy ones (bare domains, kws prefix stripped,
+# since --cf-domain expects the plain domain and the proxy builds
+# kws{N}.{domain} itself) into uci `settings.cf_domain`, keeps
+# `default_domains` as a fallback list, and restarts the service when
+# the healthy set changes or the previous run left domains failing.
+#
+# Exit codes:
+#   0 — all domains healthy, nothing changed
+#   1 — regressions detected, health set updated / service restarted
+#   2 — all domains failing (config left as-is)
+#   3 — --check itself failed (binary or network problem)
+#
+# Config (uci, package tgws, section settings):
+#   watchdog_enabled   '0'|'1'  master switch (default '1')
+#   watchdog_keep      count    max healthy domains to store in cf_domain
+#                               (default 5)
+
+LOGFILE="/var/log/tgws-watchdog.log"
+MAX_KEEP="$(uci -q get tgws.settings.watchdog_keep || echo 5)"
+
+log() {
+    echo "$(date '+%F %T') $*" >> "$LOGFILE"
+}
+
+# collect healthy kws domains from --check output
+probe() {
+    tg-ws-proxy --check --default-domains 2>&1
+}
+
+main() {
+    [ "$(uci -q get tgws.settings.enabled)" = "1" ] || {
+        log "INFO service disabled, skipping"
+        exit 0
+    }
+    [ "$(uci -q get tgws.settings.watchdog_enabled || echo 1)" = "1" ] || {
+        log "INFO watchdog disabled, skipping"
+        exit 0
+    }
+
+    local out rc ok fail okdom=""
+    out="$(probe)"
+    rc=$?
+
+    if [ "$rc" -ne 0 ] && ! echo "$out" | grep -q '^  kws'; then
+        log "ERROR --check failed (rc=$rc), no domains probed"
+        echo "$out" | tail -n 5 >> "$LOGFILE"
+        exit 3
+    fi
+
+    # --check prints `  kws2.{domain} ... [OK ]  xxxms`; keep the bare
+    # {domain} (strip the kws{N}.) so it is valid for --cf-domain
+    okdom="$(echo "$out" | awk '/^  kws/ && /\[OK/ { d=$1; sub(/^kws[0-9]+\./, "", d); print d }')"
+
+    ok="$(echo "$okdom" | grep -c . )"
+    fail="$(echo "$out" | grep -c '\[FAIL')"
+
+    log "INFO probe rc=$rc ok=$ok fail=$fail"
+
+    if [ -z "$okdom" ]; then
+        log "ERROR all domains failing, leaving config as-is"
+        exit 2
+    fi
+
+    # keep up to MAX_KEEP healthy domains, in probe order
+    newdom="$(echo "$okdom" | head -n "$MAX_KEEP" | tr '\n' ',' | sed 's/,$//')"
+    curdom="$(uci -q get tgws.settings.cf_domain)"
+
+    if [ "$newdom" != "$curdom" ]; then
+        uci set tgws.settings.cf_domain="$newdom"
+        uci commit tgws
+        log "INFO cf_domain $curdom -> $newdom"
+        /etc/init.d/tgws restart >/dev/null 2>&1
+        log "INFO service restarted with new domain list"
+        exit 1
+    elif [ "$fail" -gt 0 ]; then
+        log "INFO healthy set unchanged, some domains failing, restart"
+        /etc/init.d/tgws restart >/dev/null 2>&1
+        exit 1
+    else
+        log "INFO all domains OK, config up to date, no action"
+        exit 0
+    fi
+}
+
+main "$@"

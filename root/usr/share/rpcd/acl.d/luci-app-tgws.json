@@ -1,0 +1,22 @@
+{
+	"luci-app-tgws": {
+		"description": "Grant access to TG WS Proxy configuration",
+		"read": {
+			"ubus": {
+				"luci.tgws": [ "getStatus", "getConfig", "getLink", "getLanIP",
+					"getReleases", "getVersions", "getVersion", "getLogs", "checkUpdate", "getSecret" ]
+			},
+			"uci": [ "tgws" ]
+		},
+		"write": {
+			"ubus": {
+				"luci.tgws": [ "saveConfig", "setAction", "generateSecret",
+					"installVersion", "rollback" ]
+			},
+			"uci": [ "tgws" ],
+			"file": {
+				"/usr/bin/tg-ws-proxy": [ "read", "write" ]
+			}
+		}
+	}
+}

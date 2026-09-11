@@ -1,0 +1,482 @@
+'use strict';
+
+import { readfile, popen, glob, access, open } from 'fs';
+import { cursor } from 'uci';
+import { md5 } from 'digest';
+import { uname } from 'luci.core';
+
+const uci = cursor();
+
+const PROG = '/usr/bin/tg-ws-proxy';
+const INIT = '/etc/init.d/tgws';
+const CACHE_FILE = '/etc/tgws-releases.json';
+
+const ARCH_MAP = {
+	'mipsel':  'mipsel-unknown-linux-musl',
+	'mips':    'mips-unknown-linux-musl',
+	'aarch64': 'aarch64-unknown-linux-musl',
+	'armv7':   'armv7-unknown-linux-musleabihf',
+	'x86_64':  'x86_64-unknown-linux-musl'
+};
+
+function get_arch() {
+	let rel = readfile('/etc/openwrt_release');
+	if (rel) {
+		let m = match(rel, /DISTRIB_ARCH='([a-z0-9_]+)'/);
+		if (m && type(m) == 'array' && length(m) > 1) {
+			let a = split(m[1], '_');
+			if (a && length(a) && ARCH_MAP[a[0]])
+				return ARCH_MAP[a[0]];
+		}
+	}
+	return ARCH_MAP[uname().machine] || null;
+}
+
+function sys(cmd) {
+	let fd = popen(cmd + ' 2>&1');
+	let out = fd ? fd.read('all') : '';
+	if (fd) fd.close();
+	return out;
+}
+
+function is_running() {
+	let procs = glob('/proc/[0-9]*');
+	for (let i = 0; i < length(procs); i++) {
+		let cmd = readfile(procs[i] + '/cmdline');
+		if (cmd && index(cmd, 'tg-ws-proxy') != -1 && index(cmd, 'rpc') == -1)
+			return true;
+	}
+	return false;
+}
+
+function service_running() {
+	return is_running() || index(sys('/etc/init.d/tgws status 2>&1'), 'running') != -1;
+}
+
+function get_uci(k, def) {
+	uci.load('tgws');
+	let v = uci.get('tgws', 'settings', k);
+	return (v == null) ? def : v;
+}
+
+let LOG_DEFAULT = '/var/log/tg-ws-proxy.log';
+
+function getLanIP() {
+	let out = sys('/sbin/ip -4 addr show br-lan 2>/dev/null');
+	let m = match(out, /inet\s+([0-9.]+)/);
+	return m && type(m) == 'array' && length(m) > 1 ? m[1] : null;
+}
+
+function get_link_server() {
+	let server = get_uci('host', '0.0.0.0');
+	if (server && server != '0.0.0.0' && server != '127.0.0.1' && server != '::')
+		return server;
+
+	let link_ip = get_uci('link_ip', '');
+	if (get_uci('hostname_link', '0') == '1' || length(link_ip)) {
+		let host = get_uci('link_host', '');
+		if (!length(host)) {
+			uci.load('system');
+			let hn = uci.get('system', '@system[0]', 'hostname');
+			uci.load('network');
+			let dm = uci.get('network', 'lan', 'domain');
+			if (!dm) {
+				uci.load('dhcp');
+				dm = uci.get('dhcp', '@dnsmasq[0]', 'domain');
+			}
+			host = (hn ? hn : 'openwrt') + '.' + (dm ? dm : 'lan');
+		}
+		return host;
+	}
+
+	return link_ip || getLanIP() || '192.168.1.1';
+}
+
+function fetch_releases() {
+	let cache = CACHE_FILE;
+	let fd = popen("/bin/uclient-fetch -qO- 'https://api.github.com/repos/valnesfjord/tg-ws-proxy-rs/releases?per_page=20' 2>/dev/null");
+	if (fd) {
+		let raw = fd.read('all');
+		fd.close();
+		if (length(raw) && index(raw, '"tag_name"') != -1) {
+			let w = open(cache, 'w');
+			if (w) {
+				w.write(raw);
+				w.close();
+			}
+			return { releases: raw, from_cache: false };
+		}
+	}
+	if (access(cache)) {
+		let raw = readfile(cache);
+		if (raw)
+			return { releases: raw, from_cache: true };
+	}
+	return { error: 'Failed to fetch release info from GitHub (no internet?) and no cached copy available' };
+}
+
+function split_dc_ip(str) {
+	let out = [];
+	let parts = split(str || '', /\s+/);
+	for (let i = 0; i < length(parts); i++)
+		if (length(parts[i]))
+			push(out, parts[i]);
+	return out;
+}
+
+function join_str(arr, sep) {
+	let s = '';
+	for (let i = 0; i < length(arr); i++) {
+		if (i > 0)
+			s += sep;
+		s += arr[i];
+	}
+	return s;
+}
+
+function parse_github_tags(str) {
+	let tags = [];
+	let parts = split(str, '"tag_name":"');
+	for (let i = 1; i < length(parts); i++) {
+		let seg = split(parts[i], '"');
+		if (length(seg))
+			push(tags, seg[0]);
+	}
+	return tags;
+}
+
+function install_version(version) {
+	let arch = get_arch();
+	if (!arch)
+		return { error: 'Unsupported architecture: ' + uname().machine };
+
+	let current = get_uci('version', 'unknown');
+	let archive = 'tg-ws-proxy-' + arch + '.tar.gz';
+	let url = 'https://github.com/valnesfjord/tg-ws-proxy-rs/releases/download/'
+	          + version + '/' + archive;
+	let tmp = '/tmp/tgws-update';
+	let steps = [];
+
+	/* Сохраняем исходное состояние: был ли запущен процесс и включён ли автозапуск.
+	   Автозапуск (enabled) в UCI не трогаем — он и так сохранится. Восстановим только
+	   факт запущенности процесса, чтобы вернуть ровно то, что было до обновления. */
+	let was_running = service_running();
+
+	let fail = function(stage, detail) {
+		push(steps, { stage: stage, ok: false, detail: detail });
+		return { steps: steps, error: detail };
+	};
+	let pass = function(stage, detail) {
+		push(steps, { stage: stage, ok: true, detail: detail || '' });
+	};
+
+	/* 1. download */
+	sys('rm -rf ' + tmp + '; mkdir -p ' + tmp + ';');
+	popen("/bin/uclient-fetch -qO '" + tmp + '/' + archive + "' '" + url + "' 2>&1");
+	if (trim(sys('test -s ' + tmp + '/' + archive + ' && echo ok')) != 'ok')
+		return fail('download', 'Download failed for ' + version);
+	pass('download', archive);
+
+	/* 2. stop */
+	sys('/etc/init.d/tgws stop >/dev/null 2>&1');
+	sleep(1);
+	pass('stop', '');
+
+	/* 3. extract */
+	sys('tar -xzf ' + tmp + '/' + archive + ' -C ' + tmp + ' 2>&1');
+	if (!access(tmp + '/tg-ws-proxy'))
+		return fail('extract', 'Extraction failed');
+	pass('extract', '');
+
+	/* 4. replace */
+	sys('cp -f /usr/bin/tg-ws-proxy ' + tmp + '/tg-ws-proxy.bak 2>/dev/null');
+	sys('cp -f ' + tmp + '/tg-ws-proxy /usr/bin/tg-ws-proxy 2>&1');
+	sys('chmod 755 /usr/bin/tg-ws-proxy');
+
+	uci.load('tgws');
+	if (current != version)
+		uci.set('tgws', 'settings', 'previous_version', current);
+	uci.set('tgws', 'settings', 'version', version);
+	uci.commit('tgws');
+	pass('replace', version);
+
+	sys('rm -rf ' + tmp);
+
+	/* 5. restore — возвращаем исходное состояние службы */
+	if (was_running) {
+		sys('/etc/init.d/tgws start >/dev/null 2>&1');
+
+		let up = false;
+		for (let i = 0; i < 15; i++) {
+			sleep(1);
+			if (service_running()) { up = true; break; }
+		}
+
+		if (!up) {
+			sys('/etc/init.d/tgws stop >/dev/null 2>&1');
+			sys('/etc/init.d/tgws start >/dev/null 2>&1');
+			sleep(3);
+			up = service_running();
+		}
+
+		if (!up)
+			return fail('restore', 'The service did not start after update. Check verbose logs.');
+
+		pass('restore', 'Service was running, restarted as ' + version);
+	}
+	else {
+		sys('/etc/init.d/tgws stop >/dev/null 2>&1');
+		pass('restore', 'Service was stopped, left stopped');
+	}
+
+	return { steps: steps, success: true, message: 'Updated from ' + current + ' to ' + version };
+}
+
+const methods = {
+	getStatus: {
+		call: function() {
+			return {
+				running: is_running(),
+				enabled: get_uci('enabled', '0') == '1',
+				version: get_uci('version', 'unknown'),
+				binary_version: trim(sys(PROG + ' --version 2>&1')),
+				arch: get_arch(),
+				host: get_uci('host', '0.0.0.0'),
+				port: get_uci('port', '1443'),
+				has_secret: length(get_uci('secret', '')) > 0,
+				link_ip: get_uci('link_ip', '')
+			};
+		}
+	},
+
+	getConfig: {
+		call: function() {
+			return {
+				host:             get_uci('host', '0.0.0.0'),
+				port:             get_uci('port', '1443'),
+				secret:           get_uci('secret', ''),
+				link_ip:          get_uci('link_ip', ''),
+				hostname_link:    get_uci('hostname_link', '0') == '1',
+				link_host:        get_uci('link_host', ''),
+				link_server:      get_link_server(),
+				dc_ip:            split_dc_ip(get_uci('dc_ip', '')),
+				cf_enabled:       get_uci('cf_enabled', '0') == '1',
+				cf_priority:      get_uci('cf_priority', '0') == '1',
+				cf_domain:        get_uci('cf_domain', ''),
+				cf_worker_domain: get_uci('cf_worker_domain', ''),
+				buf_kb:           get_uci('buf_kb', '256'),
+				pool_size:        get_uci('pool_size', '4'),
+				verbose:          get_uci('verbose', '0') == '1',
+				log_file:         get_uci('log_file', '')
+			};
+		}
+	},
+
+	saveConfig: {
+		args: {
+			host: 'string', port: 'string', secret: 'string', link_ip: 'string',
+			hostname_link: true, link_host: 'string',
+			dc_ip: [], cf_enabled: true, cf_priority: true,
+			cf_domain: 'string', cf_worker_domain: 'string',
+			buf_kb: 'string', pool_size: 'string', verbose: true, log_file: 'string'
+		},
+		call: function(request) {
+			let a = request.args || {};
+
+			uci.load('tgws');
+			if (a.host !== null)             uci.set('tgws', 'settings', 'host', a.host || '0.0.0.0');
+			if (a.port !== null)             uci.set('tgws', 'settings', 'port', a.port || '1443');
+			if (a.secret !== null)           uci.set('tgws', 'settings', 'secret', a.secret);
+			if (a.link_ip !== null)          uci.set('tgws', 'settings', 'link_ip', a.link_ip || '');
+			if (a.hostname_link !== null)    uci.set('tgws', 'settings', 'hostname_link', a.hostname_link ? '1' : '0');
+			if (a.link_host !== null)        uci.set('tgws', 'settings', 'link_host', a.link_host || '');
+			if (a.cf_enabled !== null)       uci.set('tgws', 'settings', 'cf_enabled', a.cf_enabled ? '1' : '0');
+			if (a.cf_priority !== null)      uci.set('tgws', 'settings', 'cf_priority', a.cf_priority ? '1' : '0');
+			if (a.cf_domain !== null)        uci.set('tgws', 'settings', 'cf_domain', a.cf_domain || '');
+			if (a.cf_worker_domain !== null) uci.set('tgws', 'settings', 'cf_worker_domain', a.cf_worker_domain || '');
+			if (a.buf_kb !== null)           uci.set('tgws', 'settings', 'buf_kb', a.buf_kb || '256');
+			if (a.pool_size !== null)        uci.set('tgws', 'settings', 'pool_size', a.pool_size || '4');
+			if (a.verbose !== null)          uci.set('tgws', 'settings', 'verbose', a.verbose ? '1' : '0');
+			if (a.log_file !== null)         uci.set('tgws', 'settings', 'log_file', (a.log_file && trim(a.log_file)) || LOG_DEFAULT);
+
+			/* dc_ip: массив строк -> одна запись на строку */
+			if (a.dc_ip !== null) {
+				let dcs = [];
+				let inp = a.dc_ip || [];
+				for (let i = 0; i < length(inp); i++)
+					if (length(trim(inp[i])))
+						push(dcs, trim(inp[i]));
+				uci.set('tgws', 'settings', 'dc_ip', join_str(dcs, "\n"));
+			}
+
+			uci.commit('tgws');
+
+			if (uci.get('tgws', 'settings', 'enabled') == '1')
+				sys('/etc/init.d/tgws restart >/dev/null 2>&1');
+
+			return { success: true, message: 'Configuration saved' };
+		}
+	},
+
+	setAction: {
+		args: { action: 'string' },
+		call: function(request) {
+			let a = (request.args || {}).action;
+			switch (a) {
+			case 'start':   sys(INIT + ' start >/dev/null 2>&1'); break;
+			case 'stop':    sys(INIT + ' stop >/dev/null 2>&1'); break;
+			case 'restart': sys(INIT + ' restart >/dev/null 2>&1'); break;
+			case 'enable':
+				uci.load('tgws');
+				uci.set('tgws', 'settings', 'enabled', '1');
+				uci.commit('tgws');
+				sys(INIT + ' enable >/dev/null 2>&1');
+				break;
+			case 'disable':
+				uci.load('tgws');
+				uci.set('tgws', 'settings', 'enabled', '0');
+				uci.commit('tgws');
+				sys(INIT + ' disable >/dev/null 2>&1');
+				break;
+			default:
+				return { error: 'Unknown action: ' + a };
+			}
+			return { success: true };
+		}
+	},
+
+	getSecret: {
+		call: function() {
+			return { secret: get_uci('secret', '') };
+		}
+	},
+
+	generateSecret: {
+		call: function() {
+			let fd = open('/dev/urandom', 'r');
+			let buf = fd ? fd.read(16) : '';
+			if (fd) fd.close();
+			if (!length(buf))
+				return { error: 'Cannot read /dev/urandom' };
+			return { secret: md5(buf) };
+		}
+	},
+
+	getLink: {
+		call: function() {
+			let port   = get_uci('port', '1443');
+			let secret = get_uci('secret', '');
+			let server = get_link_server();
+
+			return { link: 'tg://proxy?server=' + server + '&port=' + port + '&secret=' + secret };
+		}
+	},
+
+	getReleases: {
+		call: function() {
+			return fetch_releases();
+		}
+	},
+
+	getLanIP: {
+		call: function() {
+			return { lan_ip: getLanIP() };
+		}
+	},
+
+	checkUpdate: {
+		call: function() {
+			let current = get_uci('version', 'unknown');
+			let latest  = null;
+
+			let fd = popen("/bin/uclient-fetch -qO- 'https://api.github.com/repos/valnesfjord/tg-ws-proxy-rs/releases/latest' 2>/dev/null");
+			if (fd) {
+				let tags = parse_github_tags(fd.read('all'));
+				fd.close();
+				if (length(tags))
+					latest = tags[0];
+			}
+
+			if (!latest)
+				return { error: 'Failed to check latest version from GitHub' };
+
+			return {
+				current: current,
+				latest: latest,
+				update_available: current != latest
+			};
+		}
+	},
+
+	getVersions: {
+		call: function() {
+			let tags = [];
+			let fd = popen("/bin/uclient-fetch -qO- 'https://api.github.com/repos/valnesfjord/tg-ws-proxy-rs/releases?per_page=10' 2>/dev/null");
+			if (fd) {
+				tags = parse_github_tags(fd.read('all'));
+				fd.close();
+			}
+			return { versions: tags };
+		}
+	},
+
+	installVersion: {
+		args: { version: 'string' },
+		call: function(request) {
+			return install_version((request.args || {}).version);
+		}
+	},
+
+	rollback: {
+		call: function() {
+			let prev = get_uci('previous_version', '');
+			if (!prev)
+				return { error: 'No previous version saved' };
+			return install_version(prev);
+		}
+	},
+
+	getLogs: {
+		args: { lines: 0 },
+		call: function(request) {
+			let log_file = get_uci('log_file', LOG_DEFAULT);
+			if (!log_file || !trim(log_file))
+				log_file = LOG_DEFAULT;
+			let verbose  = get_uci('verbose', '0') == '1';
+			let lines    = int((request.args || {}).lines) || 50;
+			if (lines < 1) lines = 1;
+			if (lines > 500) lines = 500;
+
+			if (!verbose)
+				return { logs: '=== Verbose logging is disabled. Enable it in Advanced Settings. ===' };
+
+			if (!access(log_file)) {
+				let dir = '/';
+				let sep = -1;
+				let i = length(log_file) - 1;
+				while (i >= 0) {
+					if (substr(log_file, i, 1) == '/') { sep = i; break; }
+					i--;
+				}
+				if (sep > 0)
+					dir = substr(log_file, 0, sep);
+				let q = function(s) { return "'" + replace(s, "'", "'\\''") + "'"; };
+				popen('/bin/mkdir -p ' + q(dir) + ' && /bin/touch ' + q(log_file));
+				return { logs: '=== Log file created: ' + log_file + '. Restart or (re)start the service to start writing here. ===' };
+			}
+
+			return { logs: sys('/usr/bin/tail -n ' + lines + ' ' + log_file + ' 2>/dev/null') };
+		}
+	},
+
+	getVersion: {
+		call: function() {
+			return {
+				uci: get_uci('version', 'unknown'),
+				binary: trim(sys(PROG + ' --version 2>&1'))
+			};
+		}
+	}
+};
+
+return { 'luci.tgws': methods };

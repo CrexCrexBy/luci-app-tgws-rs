@@ -1,0 +1,107 @@
+#!/bin/sh /etc/rc.common
+
+USE_PROCD=1
+START=95
+STOP=10
+
+PROG=/usr/bin/tg-ws-proxy
+NAME=tgws
+
+# ╨Я╨╛╨┤╨░╨▓╨╗╤П╨╡╨╝ ╤А╨░╨╖╨┤╤А╨░╨╢╨░╤О╤Й╤Г╤О ╨╛╤И╨╕╨▒╨║╤Г "Command failed: Not found"
+__UBUS_BIN="$(command -v ubus || echo /bin/ubus)"
+ubus() {
+    if [ "$1" = "call" ] && [ "$2" = "service" ] && [ "$3" = "delete" ]; then
+        "$__UBUS_BIN" "$@" >/dev/null 2>&1 || true
+    else
+        "$__UBUS_BIN" "$@"
+    fi
+}
+
+start_service() {
+    config_load "$NAME"
+    config_get_bool enabled settings enabled 0
+    [ "$enabled" != "1" ] && return 1
+
+    config_get host        settings host        "0.0.0.0"
+    config_get port        settings port        "1443"
+    config_get secret      settings secret      ""
+    config_get link_ip     settings link_ip     ""
+
+    config_get dc_ip       settings dc_ip       ""
+    config_get cf_enabled  settings cf_enabled  "0"
+    config_get cf_priority settings cf_priority "0"
+    config_get cf_domain   settings cf_domain   ""
+    config_get cf_worker_domain settings cf_worker_domain ""
+    config_get_bool default_domains settings default_domains "0"
+    config_get_bool cf_balance settings cf_balance "0"
+
+    config_get_bool verbose settings verbose "0"
+    config_get log_file    settings log_file    ""
+    config_get buf_kb    settings buf_kb    "256"
+    config_get pool_size settings pool_size "4"
+
+    [ ! -x "$PROG" ] && {
+        logger -t "$NAME" "ERROR: $PROG not found or not executable"
+        return 1
+    }
+
+    procd_open_instance
+    procd_set_param command "$PROG" --host "$host" --port "$port"
+
+    [ -n "$secret" ]  && procd_append_param command --secret "$secret"
+    [ -n "$link_ip" ] && procd_append_param command --link-ip "$link_ip"
+
+    # DC тЖТ IP (╤З╨╕╤В╨░╨╡╨╝ ╤Б╨╡╨║╤Ж╨╕╤О ╨╜╨░╨┐╤А╤П╨╝╤Г╤О ╨╕╨╖ UCI)
+    config_get dc_ip_line settings dc_ip
+    if [ -n "$dc_ip_line" ]; then
+        for ip in $dc_ip_line; do
+            procd_append_param command --dc-ip "$ip"
+        done
+    fi
+
+    # Cloudflare Proxy
+    [ "$cf_enabled" = "1" ] && {
+        [ -n "$cf_domain" ] && procd_append_param command --cf-domain "$cf_domain"
+        [ -n "$cf_worker_domain" ] && procd_append_param command --cf-worker-domain "$cf_worker_domain"
+        [ "$cf_priority" = "1" ] && procd_append_param command --cf-priority
+        [ "$default_domains" = "1" ] && procd_append_param command --default-domains
+        [ "$cf_balance" = "1" ] && procd_append_param command --cf-balance
+    }
+
+    procd_append_param command --buf-kb "$buf_kb"
+    procd_append_param command --pool-size "$pool_size"
+
+    # ╨Ы╨╛╨│-╤Д╨░╨╣╨╗
+    if [ -n "$log_file" ]; then
+        mkdir -p "$(dirname "$log_file")" 2>/dev/null
+        procd_append_param command --log-file "$log_file"
+    fi
+
+    [ "$verbose" = "1" ] && procd_append_param command --verbose \
+                         || procd_append_param command --quiet
+
+    procd_set_param respawn
+    procd_set_param stdout 1
+    procd_set_param stderr 1
+
+    procd_close_instance
+}
+
+add_dc_ip() {
+    local ip="$1"
+    procd_append_param command --dc-ip "$ip"
+}
+
+stop_service() {
+    killall -q -9 tg-ws-proxy 2>/dev/null || true
+    procd_kill "$PROG" "$NAME" 2>/dev/null || true
+}
+
+service_triggers() {
+    procd_add_reload_trigger "$NAME"
+}
+
+reload_service() {
+    stop_service
+    start_service
+}
