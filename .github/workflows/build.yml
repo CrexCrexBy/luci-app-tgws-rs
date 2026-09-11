@@ -1,0 +1,81 @@
+name: Build LuCI packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build .apk + .ipk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies & po2lmo
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl tar zstd python3-pip rsync
+          pip3 install --upgrade pip
+          pip3 install po2lmo
+
+      - name: Build with snapshot SDK (.apk for OpenWrt 25)
+        id: snap
+        run: |
+          mkdir -p /tmp/SNAPSDK
+          curl -SLk --connect-timeout 30 --retry 2 \
+            "https://downloads.openwrt.org/snapshots/targets/x86/64/profiles.json" -o /tmp/profiles.json
+          sdkname=$(python3 -c "import json;print(json.load(open('/tmp/profiles.json'))['sdk']['x86_64'])")
+          url="https://downloads.openwrt.org/snapshots/targets/x86/64/${sdkname}"
+          curl -SLk --connect-timeout 30 --retry 2 "$url" -o /tmp/SNAPSDK.tar.zst
+          zstd -d /tmp/SNAPSDK.tar.zst -o /tmp/SNAPSDK.tar
+          tar xf /tmp/SNAPSDK.tar --strip-components=1 -C /tmp/SNAPSDK
+          mkdir -p /tmp/SNAPSDK/package/luci-app-tgws-rs
+          rsync -avh --exclude='.git' --exclude='.github' . \
+            /tmp/SNAPSDK/package/luci-app-tgws-rs/
+          cd /tmp/SNAPSDK
+          ./scripts/feeds update -a
+          ./scripts/feeds install luci-app-tgws-rs
+          echo "CONFIG_PACKAGE_luci-app-tgws-rs=y" > .config
+          make defconfig
+          make package/luci-app-tgws-rs/compile V=99
+          mkdir -p artifacts
+          find bin -type f -name 'luci-app-tgws-rs*.apk' -exec cp {} artifacts/ \;
+          find bin -type f -name 'luci-i18n-tgws-rs*.apk' -exec cp {} artifacts/ \;
+
+      - name: Build with 24.10.3 SDK (.ipk for OpenWrt 23/24)
+        id: leg
+        run: |
+          mkdir -p /tmp/SDK
+          curl -SLk --connect-timeout 30 --retry 2 \
+            "https://downloads.openwrt.org/releases/24.10.3/targets/x86/64/openwrt-sdk-24.10.3-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst" \
+            -o /tmp/SDK.tar.zst
+          zstd -d /tmp/SDK.tar.zst -o /tmp/SDK.tar
+          tar xf /tmp/SDK.tar --strip-components=1 -C /tmp/SDK
+          mkdir -p /tmp/SDK/package/luci-app-tgws-rs
+          rsync -avh --exclude='.git' --exclude='.github' . \
+            /tmp/SDK/package/luci-app-tgws-rs/
+          cd /tmp/SDK
+          ./scripts/feeds update -a
+          ./scripts/feeds install luci-app-tgws-rs
+          echo "CONFIG_PACKAGE_luci-app-tgws-rs=y" > .config
+          make defconfig
+          make package/luci-app-tgws-rs/compile V=99
+          find bin -type f -name 'luci-app-tgws-rs*.ipk' -exec cp {} artifacts/ \;
+          find bin -type f -name 'luci-i18n-tgws-rs*.ipk' -exec cp {} artifacts/ \;
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: luci-app-tgws-rs
+          path: artifacts
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          name: luci-app-tgws-rs ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
