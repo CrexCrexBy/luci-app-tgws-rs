@@ -61,6 +61,21 @@ function get_uci(k, def) {
 
 let LOG_DEFAULT = '/var/log/tg-ws-proxy.log';
 
+const WD = '/usr/bin/tgws-watchdog';
+let WD_LOG_DEFAULT = '/var/log/tgws-watchdog.log';
+
+function watchdog_autostart_cron() {
+	return index(sys('grep -q "tgws-watchdog" /etc/crontabs/root 2>/dev/null && echo yes'), 'yes') != -1;
+}
+
+function watchdog_cron_line() {
+	return '*/10 * * * * ' + WD + ' >/dev/null 2>&1';
+}
+
+function q_sh(s) {
+	return "'" + replace(s, "'", "'\\''") + "'";
+}
+
 function getLanIP() {
 	let out = sys('/sbin/ip -4 addr show br-lan 2>/dev/null');
 	let m = match(out, /inet\s+([0-9.]+)/);
@@ -244,7 +259,9 @@ const methods = {
 				host: get_uci('host', '0.0.0.0'),
 				port: get_uci('port', '1443'),
 				has_secret: length(get_uci('secret', '')) > 0,
-				link_ip: get_uci('link_ip', '')
+				link_ip: get_uci('link_ip', ''),
+				watchdog_enabled: get_uci('watchdog_enabled', '0') == '1',
+				watchdog_autostart: watchdog_autostart_cron()
 			};
 		}
 	},
@@ -340,6 +357,45 @@ const methods = {
 				break;
 			default:
 				return { error: 'Unknown action: ' + a };
+			}
+			return { success: true };
+		}
+	},
+
+	setWatchdogAction: {
+		args: { action: 'string' },
+		call: function(request) {
+			let a = (request.args || {}).action;
+			uci.load('tgws');
+			switch (a) {
+			case 'start':
+				uci.set('tgws', 'settings', 'watchdog_enabled', '1');
+				uci.commit('tgws');
+				if (access(WD))
+					popen(WD + ' >/dev/null 2>&1 &');
+				break;
+			case 'stop':
+				uci.set('tgws', 'settings', 'watchdog_enabled', '0');
+				uci.commit('tgws');
+				break;
+			case 'enable':
+				uci.set('tgws', 'settings', 'watchdog_enabled', '1');
+				uci.commit('tgws');
+				if (!watchdog_autostart_cron()) {
+					sys('echo ' + q_sh(watchdog_cron_line()) + ' >> /etc/crontabs/root');
+					sys('/etc/init.d/cron restart >/dev/null 2>&1');
+				}
+				break;
+			case 'disable':
+				uci.set('tgws', 'settings', 'watchdog_enabled', '0');
+				uci.commit('tgws');
+				if (watchdog_autostart_cron()) {
+					sys("sed -i '/tgws-watchdog/d' /etc/crontabs/root 2>/dev/null");
+					sys('/etc/init.d/cron restart >/dev/null 2>&1');
+				}
+				break;
+			default:
+				return { error: 'Unknown watchdog action: ' + a };
 			}
 			return { success: true };
 		}
@@ -465,6 +521,33 @@ const methods = {
 				return { logs: '=== Log file created: ' + log_file + '. Restart or (re)start the service to start writing here. ===' };
 			}
 
+			return { logs: sys('/usr/bin/tail -n ' + lines + ' ' + log_file + ' 2>/dev/null') };
+		}
+	},
+
+	getWatchdogLogs: {
+		args: { lines: 0 },
+		call: function(request) {
+			let log_file = get_uci('watchdog_log_file', WD_LOG_DEFAULT);
+			if (!log_file || !trim(log_file))
+				log_file = WD_LOG_DEFAULT;
+			if (!access(log_file)) {
+				let dir = '/';
+				let sep = -1;
+				let i = length(log_file) - 1;
+				while (i >= 0) {
+					if (substr(log_file, i, 1) == '/') { sep = i; break; }
+					i--;
+				}
+				if (sep > 0)
+					dir = substr(log_file, 0, sep);
+				let q = function(s) { return "'" + replace(s, "'", "'\\''") + "'"; };
+				popen('/bin/mkdir -p ' + q(dir) + ' && /bin/touch ' + q(log_file));
+				return { logs: '=== Watchdog log does not exist yet. It is created on the first watchdog run. ===' };
+			}
+			let lines = int((request.args || {}).lines) || 50;
+			if (lines < 1) lines = 1;
+			if (lines > 500) lines = 500;
 			return { logs: sys('/usr/bin/tail -n ' + lines + ' ' + log_file + ' 2>/dev/null') };
 		}
 	},

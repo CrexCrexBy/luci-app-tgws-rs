@@ -18,12 +18,41 @@
 #   watchdog_enabled   '0'|'1'  master switch (default '1')
 #   watchdog_keep      count    max healthy domains to store in cf_domain
 #                               (default 5)
+#   watchdog_log       '0'|'1'  keep a watchdog log file (default '1')
+#   watchdog_log_file  path     watchdog log path (default '/var/log/tgws-watchdog.log')
+#   log_max_size       bytes    trim logs once they exceed this size (default 1M)
 
-LOGFILE="/var/log/tgws-watchdog.log"
-MAX_KEEP="$(uci -q get tgws.settings.watchdog_keep || echo 5)"
+WD_LOG="$(uci -q get tgws.settings.watchdog_log_file)"
+[ -z "$WD_LOG" ] && WD_LOG="/var/log/tgws-watchdog.log"
+LOGFILE="$WD_LOG"
+LOG_MAX="$(uci -q get tgws.settings.log_max_size || echo 1048576)"
+case "$LOG_MAX" in
+    ''|*[!0-9]*) LOG_MAX=1048576 ;;
+esac
 
 log() {
     echo "$(date '+%F %T') $*" >> "$LOGFILE"
+}
+
+# create the watchdog log file up front (recursive mkdir is for old paths)
+ensure_log() {
+    [ "$(uci -q get tgws.settings.watchdog_log || echo 1)" = "1" ] || return 0
+    [ -n "$LOGFILE" ] || return 0
+    mkdir -p "${LOGFILE%/$(basename "$LOGFILE")}" 2>/dev/null
+    [ -e "$LOGFILE" ] || touch "$LOGFILE"
+}
+
+# trim files that grew past the limit (keep up to the last 1000 lines)
+trim_log() {
+    f="$1"
+    [ -n "$f" ] && [ -f "$f" ] || return 0
+    [ "$LOG_MAX" -gt 0 ] || return 0
+    size=$(wc -c < "$f")
+    if [ "$size" -gt "$LOG_MAX" ]; then
+        tmp="${f}.trim.$$"
+        tail -n 1000 "$f" > "$tmp" 2>/dev/null && mv -f "$tmp" "$f"
+        log "INFO trimmed $f ($size -> $(wc -c < "$f") bytes)"
+    fi
 }
 
 # collect healthy kws domains from --check output
@@ -32,6 +61,12 @@ probe() {
 }
 
 main() {
+    ensure_log
+
+    trim_log "$LOGFILE"
+    main_log="$(uci -q get tgws.settings.log_file)"
+    [ -n "$main_log" ] && trim_log "$main_log"
+
     [ "$(uci -q get tgws.settings.enabled)" = "1" ] || {
         log "INFO service disabled, skipping"
         exit 0

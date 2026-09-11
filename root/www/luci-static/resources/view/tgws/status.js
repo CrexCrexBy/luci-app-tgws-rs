@@ -13,6 +13,8 @@ var callGetLink    = rpc.declare({ object: 'luci.tgws', method: 'getLink', expec
 var callGetReleases= rpc.declare({ object: 'luci.tgws', method: 'getReleases', expect: {} });
 var callInstall    = rpc.declare({ object: 'luci.tgws', method: 'installVersion', params: ['version'], expect: {} });
 var callGetLogs    = rpc.declare({ object: 'luci.tgws', method: 'getLogs', params: ['lines'], expect: {} });
+var callGetWatchdogLogs = rpc.declare({ object: 'luci.tgws', method: 'getWatchdogLogs', params: ['lines'], expect: {} });
+var callSetWatchdogAction = rpc.declare({ object: 'luci.tgws', method: 'setWatchdogAction', params: ['action'], expect: {} });
 var callGenerateSecret = rpc.declare({ object: 'luci.tgws', method: 'generateSecret', expect: {} });
 
 function mkBtn(text, action, cls, disabled) {
@@ -47,18 +49,28 @@ function parseReleases(rd) {
 	}
 }
 
-function statusBadge(running) {
+function statusBadge(label, active) {
+	var running = typeof active === 'boolean' ? active : true;
 	return E('span', {
 		'class': 'ifacebadge' + (running ? ' ifacebadge-active' : ''),
 		'style': 'font-size:12px; font-weight:700;'
-	}, running ? _('Running') : _('Stopped'));
+	}, label);
 }
 
-function enabledBadge(enabled) {
-	return E('span', {
-		'class': 'ifacebadge' + (enabled ? ' ifacebadge-active' : ''),
-		'style': 'font-size:12px; font-weight:700;'
-	}, enabled ? _('Auto-start enabled') : _('Auto-start disabled'));
+function tgwsBadge(running) {
+	return statusBadge(running ? _('TGWS Running') : _('TGWS Stopped'), running);
+}
+
+function tgwsAutostartBadge(enabled) {
+	return statusBadge(enabled ? _('TGWS Auto-start enabled') : _('TGWS Auto-start disabled'), enabled);
+}
+
+function watchdogBadge(running) {
+	return statusBadge(running ? _('Watchdog Running') : _('Watchdog Stopped'), running);
+}
+
+function watchdogAutostartBadge(enabled) {
+	return statusBadge(enabled ? _('Watchdog Auto-start enabled') : _('Watchdog Auto-start disabled'), enabled);
 }
 
 var secretField = form.Value.extend({
@@ -103,12 +115,14 @@ return view.extend({
 		var h2badges = null;
 		var updateVersion = null;
 
-		var paintBadges = function(running, enabled) {
+		var paintBadges = function(s) {
 			if (!h2badges)
 				return;
 			dom.content(h2badges, [
-				statusBadge(running),
-				enabledBadge(enabled)
+				tgwsBadge(s.running),
+				tgwsAutostartBadge(s.enabled),
+				watchdogBadge(s.watchdog_enabled),
+				watchdogAutostartBadge(s.watchdog_autostart)
 			]);
 		};
 
@@ -116,13 +130,18 @@ return view.extend({
 			renderWidget: function(section_id, option_id, cfgvalue) {
 				var box = E('div', { 'id': 'tgws-status' });
 				var paint = function(s) {
-					paintBadges(s.running, s.enabled);
+					paintBadges(s);
 					var run = function() {
 						callGetStatus().then(paint).catch(err);
 					};
 					var act = function(action) {
 						return function() {
 							callSetAction(action).then(run).catch(err);
+						};
+					};
+					var wdAct = function(action) {
+						return function() {
+							callSetWatchdogAction(action).then(run).catch(err);
 						};
 					};
 					var btns = [
@@ -135,6 +154,15 @@ return view.extend({
 						mkBtn(s.enabled ? _('Disable auto-start') : _('Enable auto-start'), function() {
 							callSetAction(s.enabled ? 'disable' : 'enable').then(run).catch(err);
 						}, s.enabled ? 'cbi-button-negative' : 'cbi-button-positive')
+					];
+					var wdbtns = [
+						mkBtn(_('Watchdog start'), wdAct('start'), 'cbi-button-positive important', s.watchdog_enabled),
+						' ',
+						mkBtn(_('Watchdog stop'), wdAct('stop'), 'cbi-button-negative important', !s.watchdog_enabled),
+						' ',
+						mkBtn(s.watchdog_autostart ? _('Watchdog stop autostart') : _('Watchdog enable autostart'), function() {
+							callSetWatchdogAction(s.watchdog_autostart ? 'disable' : 'enable').then(run).catch(err);
+						}, s.watchdog_autostart ? 'cbi-button-negative' : 'cbi-button-positive')
 					];
 					btns.push(' ', mkBtn(_('Show link & QR-code...'), function() {
 						callGetLink().then(function(l) {
@@ -149,7 +177,8 @@ return view.extend({
 						}).catch(err);
 					}, 'cbi-button-action'));
 					dom.content(box, [
-						E('p', {}, btns)
+						E('p', {}, btns),
+						E('p', { 'style': 'margin-top:6px;' }, wdbtns)
 					]);
 				};
 				paint(st);
@@ -289,6 +318,40 @@ return view.extend({
 			}
 		});
 
+		var logSizeField = form.Value.extend({
+			renderWidget: function(section_id, option_id, cfgvalue) {
+				var value = (cfgvalue != null) ? String(cfgvalue) : '1048576';
+				var choices = this.transformChoices() || {};
+				var widget = new ui.Dropdown(value, choices, {
+					id: this.cbid(section_id),
+					sort: false,
+					optional: false,
+					create: true,
+					custom_placeholder: this.placeholder || _('-- custom --'),
+					disabled: (this.readonly != null) ? this.readonly : this.map.readonly
+				});
+				return widget.render();
+			}
+		});
+
+		var watchdogLogPanel = form.DummyValue.extend({
+			renderWidget: function(section_id, option_id, cfgvalue) {
+				var box = E('div', { 'id': 'tgws-wdlog', 'style': 'width:100%' });
+				var pre = E('pre', { 'style': 'white-space:pre-wrap; font-family:monospace; margin:0;' }, '');
+				var load = function() {
+					callGetWatchdogLogs(50).then(function(res) {
+						dom.content(pre, res.logs || '');
+					}).catch(err);
+				};
+				dom.content(box, [
+					E('p', {}, mkBtn(_('Refresh watchdog log'), load, 'cbi-button-action')),
+					pre
+				]);
+				load();
+				return box;
+			}
+		});
+
 		var logPanel = form.DummyValue.extend({
 			renderWidget: function(section_id, option_id, cfgvalue) {
 				var box = E('div', { 'id': 'tgws-log', 'style': 'width:100%' });
@@ -355,11 +418,26 @@ return view.extend({
 		s.taboption('update', updatePanel, '__update__');
 
 		o = s.taboption('logs', form.Flag, 'verbose', _('Verbose logging'), _('Write detailed log output to the log file.'));
-		o = s.taboption('logs', form.Value, 'log_file', _('Log file'), _('Path to the log file used by the proxy.'));
+		o = s.taboption('logs', form.Value, 'log_file', _('Main log file'), _('Path to the log file used by the proxy.'));
 		o.placeholder = '/var/log/tg-ws-proxy.log';
 		o.depends('verbose', '1');
 		o = s.taboption('logs', logPanel, '__logs__');
 		o.depends('verbose', '1');
+		o = s.taboption('logs', form.Flag, 'watchdog_log', _('Watchdog logging'), _('Keep a separate log file for the domain watchdog.'));
+		o = s.taboption('logs', form.Value, 'watchdog_log_file', _('Watchdog log file'), _('Path to the watchdog log file. The file is created automatically on the first watchdog run.'));
+		o.placeholder = '/var/log/tgws-watchdog.log';
+		o.depends('watchdog_log', '1');
+		o = s.taboption('logs', watchdogLogPanel, '__wdlog__');
+		o.depends('watchdog_log', '1');
+		o = s.taboption('logs', logSizeField, 'log_max_size', _('Max log file size'), _('Roughly how large a log file may grow before old lines are trimmed. You can type a custom byte value.'));
+		o.value('262144', '256 KB');
+		o.value('524288', '512 KB');
+		o.value('1048576', '1 MB');
+		o.value('2097152', '2 MB');
+		o.value('5242880', '5 MB');
+		o.value('10485760', '10 MB');
+		o.default = '1048576';
+		o.datatype = 'uinteger';
 
 		return m.render().then(function(mapEl) {
 			var h2 = mapEl.querySelector('h2[name="content"]');
@@ -377,7 +455,7 @@ return view.extend({
 				h2.appendChild(h2badges);
 				updateVersion();
 			}
-			paintBadges(st.running, st.enabled);
+			paintBadges(st);
 			return mapEl;
 		});
 	}
