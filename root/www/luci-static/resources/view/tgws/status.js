@@ -307,10 +307,27 @@ return view.extend({
 						var counter = E('span', { 'style': 'margin:0 10px; vertical-align:middle;' },
 							_('Page %d of %d').format(page + 1, totalPages));
 
+						var repoUrl = 'https://github.com/valnesfjord/tg-ws-proxy-rs';
+						var badges = E('div', { 'style': 'margin:4px 0 8px; display:flex; gap:6px; flex-wrap:wrap; align-items:center;' }, [
+							E('a', { 'href': repoUrl, 'target': '_blank', 'style': 'text-decoration:none;' },
+								E('img', { 'src': 'https://img.shields.io/github/stars/valnesfjord/tg-ws-proxy-rs?style=flat&logo=github&label=Stars', 'alt': 'Stars', 'style': 'height:20px;' })),
+							E('a', { 'href': repoUrl, 'target': '_blank', 'style': 'text-decoration:none;' },
+								E('img', { 'src': 'https://img.shields.io/github/license/valnesfjord/tg-ws-proxy-rs?style=flat&label=License', 'alt': 'License', 'style': 'height:20px;' })),
+							E('a', { 'href': repoUrl + '/releases', 'target': '_blank', 'style': 'text-decoration:none;' },
+								E('img', { 'src': 'https://img.shields.io/github/v/release/valnesfjord/tg-ws-proxy-rs?style=flat&label=Latest', 'alt': 'Release', 'style': 'height:20px;' })),
+							E('a', { 'href': repoUrl, 'target': '_blank' }, repoUrl)
+						]);
+
 						dom.content(box, [
-							E('div', { 'class': 'cbi-map-descr' }, rd.from_cache
-								? _('Showing cached release list (no internet connection at last check).')
-								: _('Latest releases from GitHub.')),
+							E('div', { 'class': 'cbi-map-descr' }, [
+								E('strong', {}, _('Telegram WebSocket Proxy')),
+								' — ',
+								_('A Rust-based WebSocket proxy for Telegram with Cloudflare support.'),
+								badges,
+								rd.from_cache
+									? E('p', { 'style': 'color:#888; margin:4px 0 0;' }, _('Showing cached release list (no internet connection at last check).'))
+									: null
+							]),
 							table,
 							E('div', { 'style': 'text-align:center; margin-top:6px;' }, [ prevBtn, counter, nextBtn ])
 						]);

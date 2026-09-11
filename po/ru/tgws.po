@@ -212,6 +212,9 @@ msgstr "Порт TCP для входящих соединений."
 msgid "Telegram WebSocket Proxy"
 msgstr "Прокси Telegram WebSocket"
 
+msgid "A Rust-based WebSocket proxy for Telegram with Cloudflare support."
+msgstr "WebSocket-прокси для Telegram на Rust с поддержкой Cloudflare."
+
 msgid "TGWS Auto-start disabled"
 msgstr "Автозапуск TGWS отключён"
 
