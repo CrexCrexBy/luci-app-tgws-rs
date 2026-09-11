@@ -4,7 +4,7 @@ LuCI web interface for **[tg-ws-proxy-rs](https://github.com/valnesfjord/tg-ws-p
 
 The UI lets you manage the proxy right from the router web panel: status, settings (including Cloudflare / worker mode), software updates straight from the GitHub releases, logs and an automatic Cloudflare-domain watchdog.
 
-![Overview](screenshots/overview.png)
+![Overview](screenshots/overview.webp)
 
 ## Features
 
@@ -51,10 +51,10 @@ Generate a secret (or import your existing one) in the Settings tab and enable t
 
 > Screenshots go here (drop your PNG files into `screenshots/`):
 
-![Status page](screenshots/overview.png)
-![Settings](screenshots/settings.png)
-![Software Update](screenshots/update.png)
-![Logs](screenshots/logs.png)
+![Status page](screenshots/overview.webp)
+![Settings](screenshots/settings.webp)
+![Software Update](screenshots/update.webp)
+![Logs](screenshots/logs.webp)
 
 ## Building from source
 
