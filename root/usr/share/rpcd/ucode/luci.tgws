@@ -261,7 +261,10 @@ const methods = {
 				has_secret: length(get_uci('secret', '')) > 0,
 				link_ip: get_uci('link_ip', ''),
 				watchdog_enabled: get_uci('watchdog_enabled', '0') == '1',
-				watchdog_autostart: watchdog_autostart_cron()
+				watchdog_autostart: watchdog_autostart_cron(),
+				watchdog_worker: get_uci('watchdog_worker', '1') == '1',
+				worker_enabled: get_uci('cf_worker_enabled', '0') == '1',
+				worker_domain: get_uci('cf_worker_domain', '')
 			};
 		}
 	},
@@ -277,10 +280,12 @@ const methods = {
 				link_host:        get_uci('link_host', ''),
 				link_server:      get_link_server(),
 				dc_ip:            split_dc_ip(get_uci('dc_ip', '')),
-				cf_enabled:       get_uci('cf_enabled', '0') == '1',
-				cf_priority:      get_uci('cf_priority', '0') == '1',
-				cf_domain:        get_uci('cf_domain', ''),
-				cf_worker_domain: get_uci('cf_worker_domain', ''),
+			cf_enabled:       get_uci('cf_enabled', '0') == '1',
+			cf_priority:      get_uci('cf_priority', '0') == '1',
+			cf_domain:        get_uci('cf_domain', ''),
+			cf_worker_enabled: get_uci('cf_worker_enabled', '0') == '1',
+			cf_worker_domain: get_uci('cf_worker_domain', ''),
+			watchdog_worker:  get_uci('watchdog_worker', '1') == '1',
 				buf_kb:           get_uci('buf_kb', '256'),
 				pool_size:        get_uci('pool_size', '4'),
 				verbose:          get_uci('verbose', '0') == '1',
@@ -294,7 +299,8 @@ const methods = {
 			host: 'string', port: 'string', secret: 'string', link_ip: 'string',
 			hostname_link: true, link_host: 'string',
 			dc_ip: [], cf_enabled: true, cf_priority: true,
-			cf_domain: 'string', cf_worker_domain: 'string',
+			cf_domain: 'string', cf_worker_enabled: true, cf_worker_domain: 'string',
+			watchdog_worker: true,
 			buf_kb: 'string', pool_size: 'string', verbose: true, log_file: 'string'
 		},
 		call: function(request) {
@@ -310,7 +316,9 @@ const methods = {
 			if (a.cf_enabled !== null)       uci.set('tgws', 'settings', 'cf_enabled', a.cf_enabled ? '1' : '0');
 			if (a.cf_priority !== null)      uci.set('tgws', 'settings', 'cf_priority', a.cf_priority ? '1' : '0');
 			/* cf_domain is managed by the watchdog only — never save it from the form */
+			if (a.cf_worker_enabled !== null) uci.set('tgws', 'settings', 'cf_worker_enabled', a.cf_worker_enabled ? '1' : '0');
 			if (a.cf_worker_domain !== null) uci.set('tgws', 'settings', 'cf_worker_domain', a.cf_worker_domain || '');
+			if (a.watchdog_worker !== null)  uci.set('tgws', 'settings', 'watchdog_worker', a.watchdog_worker ? '1' : '0');
 			if (a.buf_kb !== null)           uci.set('tgws', 'settings', 'buf_kb', a.buf_kb || '256');
 			if (a.pool_size !== null)        uci.set('tgws', 'settings', 'pool_size', a.pool_size || '4');
 			if (a.verbose !== null)          uci.set('tgws', 'settings', 'verbose', a.verbose ? '1' : '0');

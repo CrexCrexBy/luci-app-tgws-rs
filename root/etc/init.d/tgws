@@ -34,6 +34,7 @@ start_service() {
     config_get cf_worker_domain settings cf_worker_domain ""
     config_get_bool default_domains settings default_domains "0"
     config_get_bool cf_balance settings cf_balance "0"
+    config_get_bool cf_worker_enabled settings cf_worker_enabled 0
 
     config_get_bool verbose settings verbose "0"
     config_get log_file    settings log_file    ""
@@ -62,7 +63,7 @@ start_service() {
     # Cloudflare Proxy
     [ "$cf_enabled" = "1" ] && {
         [ -n "$cf_domain" ] && procd_append_param command --cf-domain "$cf_domain"
-        [ -n "$cf_worker_domain" ] && procd_append_param command --cf-worker-domain "$cf_worker_domain"
+        [ "$cf_worker_enabled" = "1" ] && [ -n "$cf_worker_domain" ] && procd_append_param command --cf-worker-domain "$cf_worker_domain"
         [ "$cf_priority" = "1" ] && procd_append_param command --cf-priority
         [ "$default_domains" = "1" ] && procd_append_param command --default-domains
         [ "$cf_balance" = "1" ] && procd_append_param command --cf-balance

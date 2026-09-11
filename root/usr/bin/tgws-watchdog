@@ -21,6 +21,8 @@
 #   watchdog_log       '0'|'1'  keep a watchdog log file (default '1')
 #   watchdog_log_file  path     watchdog log path (default '/var/log/tgws-watchdog.log')
 #   log_max_size       bytes    trim logs once they exceed this size (default 1M)
+#   watchdog_worker    '0'|'1'  allow the watchdog to auto-toggle cf_worker_enabled
+#                               based on the worker health (default '1')
 
 WD_LOG="$(uci -q get tgws.settings.watchdog_log_file)"
 [ -z "$WD_LOG" ] && WD_LOG="/var/log/tgws-watchdog.log"
@@ -32,6 +34,11 @@ esac
 MAX_KEEP="$(uci -q get tgws.settings.watchdog_keep || echo 5)"
 case "$MAX_KEEP" in
     ''|*[!0-9]*) MAX_KEEP=5 ;;
+esac
+WD_WORKER="$(uci -q get tgws.settings.watchdog_worker || echo 1)"
+case "$WD_WORKER" in
+    0|false) WD_WORKER=0 ;;
+    *)        WD_WORKER=1 ;;
 esac
 
 log() {
@@ -64,6 +71,45 @@ probe() {
     tg-ws-proxy --check --default-domains 2>&1
 }
 
+# probe the worker: any HTTP response (2xx/3xx/4xx/5xx) means the worker is
+# reachable and routes to our proxy; a connection error means it is down.
+probe_worker() {
+    domain="$1"
+    [ -n "$domain" ] || return 2
+    code=$(curl -sS -o /dev/null --max-time 8 -w '%{http_code}' "https://$domain/apiws" 2>/dev/null)
+    case "$code" in
+        ''|000) return 1 ;;
+        *)      return 0 ;;
+    esac
+}
+
+# toggle cf_worker_enabled and restart the service if the flag flipped
+manage_worker() {
+    [ "$WD_WORKER" = "1" ] || return 0
+    domain="$(uci -q get tgws.settings.cf_worker_domain)"
+    [ -n "$domain" ] || return 0
+    cur="$(uci -q get tgws.settings.cf_worker_enabled || echo 0)"
+    if probe_worker "$domain"; then
+        if [ "$cur" != "1" ]; then
+            uci set tgws.settings.cf_worker_enabled=1
+            uci commit tgws
+            log "INFO worker $domain healthy, cf_worker_enabled 0 -> 1, restart"
+            /etc/init.d/tgws restart >/dev/null 2>&1
+        else
+            log "INFO worker $domain healthy, already enabled"
+        fi
+    else
+        if [ "$cur" = "1" ]; then
+            uci set tgws.settings.cf_worker_enabled=0
+            uci commit tgws
+            log "INFO worker $domain unreachable, cf_worker_enabled 1 -> 0, restart"
+            /etc/init.d/tgws restart >/dev/null 2>&1
+        else
+            log "INFO worker $domain unreachable, already disabled"
+        fi
+    fi
+}
+
 main() {
     ensure_log
 
@@ -81,6 +127,9 @@ main() {
     }
 
     local out rc ok fail okdom=""
+
+    manage_worker
+
     out="$(probe)"
     rc=$?
 

@@ -73,6 +73,15 @@ function watchdogAutostartBadge(enabled) {
 	return statusBadge(enabled ? _('Watchdog Auto-start enabled') : _('Watchdog Auto-start disabled'), enabled);
 }
 
+function workerBadge(enabled, domain) {
+	if (!domain) return null;
+	return statusBadge(enabled ? _('Worker ON') : _('Worker OFF'), enabled);
+}
+
+function watchdogWorkerBadge(enabled) {
+	return statusBadge(enabled ? _('Watchdog toggles worker') : _('Worker managed manually'), enabled);
+}
+
 var secretField = form.Value.extend({
 	renderWidget: function(section_id, option_index, cfgvalue) {
 		var value = (cfgvalue != null) ? cfgvalue : this.default;
@@ -118,12 +127,17 @@ return view.extend({
 		var paintBadges = function(s) {
 			if (!h2badges)
 				return;
-			dom.content(h2badges, [
+			var badges = [
 				tgwsBadge(s.running),
 				tgwsAutostartBadge(s.enabled),
 				watchdogBadge(s.watchdog_enabled),
 				watchdogAutostartBadge(s.watchdog_autostart)
-			]);
+			];
+			if (s.worker_domain) {
+				badges.push(workerBadge(s.worker_enabled, s.worker_domain));
+				badges.push(watchdogWorkerBadge(s.watchdog_worker));
+			}
+			dom.content(h2badges, badges);
 		};
 
 		var statusPanel = form.DummyValue.extend({
@@ -402,13 +416,16 @@ return view.extend({
 		o.depends('cf_enabled', '1');
 		o = s.taboption('settings', form.Flag, 'cf_balance', _('Balance connections across Cloudflare domains'), _('Round-robin across multiple Cloudflare proxy domains instead of always trying the same one first.'));
 		o.depends('cf_enabled', '1');
+		o = s.taboption('settings', form.Flag, 'cf_worker_enabled', _('Use Cloudflare worker'), _('Enable the Cloudflare worker route. Toggled automatically by the watchdog based on worker health.'));
+		o.depends('cf_enabled', '1');
 		o = s.taboption('settings', form.Value, 'cf_domain', _('Cloudflare proxy domains (auto)'), _('Automatically filled by the watchdog from its health checks (healthy-then-fallback order). Read-only — to manage manually, stop the watchdog first.'));
 		o.placeholder = 'yourdomain.com';
 		o.readonly = true;
 		o.depends('cf_enabled', '1');
 		o = s.taboption('settings', form.Value, 'cf_worker_domain', _('Cloudflare worker domain'), _('The worker domain used for the Cloudflare route.'));
-		o.depends('cf_enabled', '1');
+		o.depends('cf_worker_enabled', '1');
 		o.placeholder = 'tg-ws-proxy.example.workers.dev';
+		o = s.taboption('settings', form.Flag, 'watchdog_worker', _('Watchdog manages worker'), _('Let the watchdog automatically enable or disable the Cloudflare worker based on its health. Disable to keep manual control.'));
 		o = s.taboption('settings', form.Value, 'buf_kb', _('Buffer size (KB)'), _('Socket buffer size in kilobytes.'));
 		o.placeholder = '256';
 		o.datatype = 'uinteger';

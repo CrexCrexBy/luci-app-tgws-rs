@@ -1,0 +1,300 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: luci-app-tgws\n"
+"Language-Team: Russian\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+msgid "-- custom --"
+msgstr "-- свой --"
+
+msgid "Automatically filled by the watchdog from its health checks (healthy-then-fallback order). Read-only — to manage manually, stop the watchdog first."
+msgstr "Автоматически заполняется сторожем по результатам проверок здоровья (сначала рабочие, затем резервные). Только чтение — для ручного управления сначала остановите сторожа."
+
+msgid "Balance connections across Cloudflare domains"
+msgstr "Балансировать соединения между доменами Cloudflare"
+
+msgid "Buffer size (KB)"
+msgstr "Размер буфера (КБ)"
+
+msgid "Close"
+msgstr "Закрыть"
+
+msgid "Cloudflare proxy domains (auto)"
+msgstr "Домены Cloudflare-прокси (авто)"
+
+msgid "Cloudflare worker domain"
+msgstr "Домен Cloudflare Worker"
+
+msgid "Connection pool size"
+msgstr "Размер пула соединений"
+
+msgid "Custom link host"
+msgstr "Свой хост для ссылки"
+
+msgid "Datacenter IPs"
+msgstr "IP-адреса дата-центров"
+
+msgid "Disable auto-start"
+msgstr "Отключить автозапуск"
+
+msgid "Downloading %s"
+msgstr "Загрузка %s"
+
+msgid "Enable auto-start"
+msgstr "Включить автозапуск"
+
+msgid "Enable Cloudflare-proxied connection"
+msgstr "Использовать соединение через Cloudflare"
+
+msgid "Enable the Cloudflare worker route. Toggled automatically by the watchdog based on worker health."
+msgstr "Включить маршрут через Cloudflare Worker. Переключается сторожем автоматически по состоянию Worker."
+
+msgid "Error"
+msgstr "Ошибка"
+
+msgid "Error: %s"
+msgstr "Ошибка: %s"
+
+msgid "Extracting archive"
+msgstr "Распаковка архива"
+
+msgid "Fetch and use the Cloudflare proxy domain list from GitHub (no domain setup needed)."
+msgstr "Взять и использовать список доменов Cloudflare-прокси с GitHub (настройка доменов не требуется)."
+
+msgid "Generate"
+msgstr "Сгенерировать"
+
+msgid "Generate proxy links/QR with the router hostname instead of the LAN IP."
+msgstr "Генерировать ссылки/QR прокси с именем роутера вместо IP-адреса LAN."
+
+msgid "Hostname or IP address to bind to."
+msgstr "Имя хоста или IP-адрес для привязки."
+
+msgid "Install"
+msgstr "Установить"
+
+msgid "Installed"
+msgstr "Установлено"
+
+msgid "Installing %s..."
+msgstr "Установка %s..."
+
+msgid "Invalid release data"
+msgstr "Некорректные данные о релизах"
+
+msgid "Keep a separate log file for the domain watchdog."
+msgstr "Вести отдельный файл журнала для сторожа доменов."
+
+msgid "Latest releases from GitHub."
+msgstr "Последние релизы с GitHub."
+
+msgid "Let the watchdog automatically enable or disable the Cloudflare worker based on its health. Disable to keep manual control."
+msgstr "Разрешить сторожу автоматически включать/отключать Cloudflare Worker по его состоянию. Отключите для ручного управления."
+
+msgid "List of Telegram datacenter IPs, one per line."
+msgstr "Список IP-адресов дата-центров Telegram, по одному на строку."
+
+msgid "Listen host"
+msgstr "Адрес прослушивания"
+
+msgid "Listen port"
+msgstr "Порт прослушивания"
+
+msgid "Logs"
+msgstr "Журналы"
+
+msgid "Main log file"
+msgstr "Основной файл журнала"
+
+msgid "Max log file size"
+msgstr "Максимальный размер журнала"
+
+msgid "Next"
+msgstr "Далее"
+
+msgid "Number of simultaneous upstream connections."
+msgstr "Число одновременных исходящих соединений."
+
+msgid "Override the hostname used in the proxy link."
+msgstr "Переопределить имя хоста, используемое в ссылке на прокси."
+
+msgid "Page %d of %d"
+msgstr "Страница %d из %d"
+
+msgid "Path to the log file used by the proxy."
+msgstr "Путь к файлу журнала, используемому прокси."
+
+msgid "Path to the watchdog log file. The file is created automatically on the first watchdog run."
+msgstr "Путь к файлу журнала сторожа. Файл создаётся автоматически при первом запуске сторожа."
+
+msgid "Prefer Cloudflare connection"
+msgstr "Предпочитать соединение через Cloudflare"
+
+msgid "Previous"
+msgstr "Назад"
+
+msgid "Proxy"
+msgstr "Прокси"
+
+msgid "Proxy link"
+msgstr "Ссылка на прокси"
+
+msgid "Published"
+msgstr "Опубликовано"
+
+msgid "Refresh log"
+msgstr "Обновить журнал"
+
+msgid "Refresh watchdog log"
+msgstr "Обновить журнал сторожа"
+
+msgid "Release notes"
+msgstr "Примечания к выпуску"
+
+msgid "Replacing binary with %s"
+msgstr "Замена исполняемого файла на %s"
+
+msgid "Restart"
+msgstr "Перезапустить"
+
+msgid "Restoring service state"
+msgstr "Восстановление состояния службы"
+
+msgid "Roughly how large a log file may grow before old lines are trimmed. You can type a custom byte value."
+msgstr "Примерно до какого размера может вырасти журнал, прежде чем старые строки будут обрезаны. Можно ввести своё значение в байтах."
+
+msgid "Round-robin across multiple Cloudflare proxy domains instead of always trying the same one first."
+msgstr "Перебирать несколько доменов Cloudflare-прокси по кругу, а не всегда пробовать сначала один и тот же."
+
+msgid "Route connections through Cloudflare."
+msgstr "Направлять соединения через Cloudflare."
+
+msgid "Secret"
+msgstr "Секрет"
+
+msgid "Settings"
+msgstr "Настройки"
+
+msgid "Shared secret for proxy authentication."
+msgstr "Общий секрет для аутентификации прокси."
+
+msgid "Show link & QR-code..."
+msgstr "Показать ссылку и QR-код..."
+
+msgid "Showing cached release list (no internet connection at last check)."
+msgstr "Показывается кэшированный список релизов (при последней проверке не было интернета)."
+
+msgid "Socket buffer size in kilobytes."
+msgstr "Размер буфера сокета в килобайтах."
+
+msgid "Software Update"
+msgstr "Обновление ПО"
+
+msgid "Start"
+msgstr "Запустить"
+
+msgid "Status"
+msgstr "Статус"
+
+msgid "Stop"
+msgstr "Остановить"
+
+msgid "Stopping current service"
+msgstr "Остановка текущей службы"
+
+msgid "TCP port for incoming connections."
+msgstr "Порт TCP для входящих соединений."
+
+msgid "Telegram WebSocket Proxy"
+msgstr "Прокси Telegram WebSocket"
+
+msgid "TGWS Auto-start disabled"
+msgstr "Автозапуск TGWS отключён"
+
+msgid "TGWS Auto-start enabled"
+msgstr "Автозапуск TGWS включён"
+
+msgid "TGWS Running"
+msgstr "TGWS запущен"
+
+msgid "TGWS Stopped"
+msgstr "TGWS остановлен"
+
+msgid "The worker domain used for the Cloudflare route."
+msgstr "Домен Worker для маршрута через Cloudflare."
+
+msgid "Update installed"
+msgstr "Обновление установлено"
+
+msgid "Use built-in Cloudflare domains"
+msgstr "Использовать встроенные домены Cloudflare"
+
+msgid "Use Cloudflare worker"
+msgstr "Использовать Cloudflare Worker"
+
+msgid "Use router hostname in links"
+msgstr "Использовать имя роутера в ссылках"
+
+msgid "Use the Cloudflare route as the primary one."
+msgstr "Использовать маршрут через Cloudflare как основной."
+
+msgid "Verbose logging"
+msgstr "Подробный журнал"
+
+msgid "Version"
+msgstr "Версия"
+
+msgid "Watchdog Auto-start disabled"
+msgstr "Автозапуск сторожа отключён"
+
+msgid "Watchdog Auto-start enabled"
+msgstr "Автозапуск сторожа включён"
+
+msgid "Watchdog enable autostart"
+msgstr "Включить автозапуск сторожа"
+
+msgid "Watchdog log file"
+msgstr "Файл журнала сторожа"
+
+msgid "Watchdog logging"
+msgstr "Журнал сторожа"
+
+msgid "Watchdog manages worker"
+msgstr "Сторож управляет Worker"
+
+msgid "Watchdog Running"
+msgstr "Сторож запущен"
+
+msgid "Watchdog start"
+msgstr "Запустить сторожа"
+
+msgid "Watchdog stop"
+msgstr "Остановить сторожа"
+
+msgid "Watchdog stop autostart"
+msgstr "Отключить автозапуск сторожа"
+
+msgid "Watchdog Stopped"
+msgstr "Сторож остановлен"
+
+msgid "Watchdog toggles worker"
+msgstr "Сторож переключает Worker"
+
+msgid "Worker managed manually"
+msgstr "Worker управляется вручную"
+
+msgid "Worker OFF"
+msgstr "Worker ВЫКЛ"
+
+msgid "Worker ON"
+msgstr "Worker ВКЛ"
+
+msgid "Write detailed log output to the log file."
+msgstr "Записывать подробные сведения в файл журнала."
+
+msgid "TG WS Proxy"
+msgstr "Прокси TG WS"
