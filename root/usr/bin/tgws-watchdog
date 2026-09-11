@@ -29,6 +29,10 @@ LOG_MAX="$(uci -q get tgws.settings.log_max_size || echo 1048576)"
 case "$LOG_MAX" in
     ''|*[!0-9]*) LOG_MAX=1048576 ;;
 esac
+MAX_KEEP="$(uci -q get tgws.settings.watchdog_keep || echo 5)"
+case "$MAX_KEEP" in
+    ''|*[!0-9]*) MAX_KEEP=5 ;;
+esac
 
 log() {
     echo "$(date '+%F %T') $*" >> "$LOGFILE"
