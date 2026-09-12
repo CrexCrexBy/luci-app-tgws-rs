@@ -10,6 +10,8 @@ jobs:
   build:
     name: Build .apk + .ipk
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,9 +44,9 @@ jobs:
           echo "CONFIG_PACKAGE_luci-app-tgws-rs=y" > .config
           make defconfig
           make package/luci-app-tgws-rs/compile V=99
-          mkdir -p artifacts
-          find bin -type f -name 'luci-app-tgws-rs*.apk' -exec cp {} artifacts/ \;
-          find bin -type f -name 'luci-i18n-tgws-rs*.apk' -exec cp {} artifacts/ \;
+          mkdir -p ${GITHUB_WORKSPACE}/artifacts
+          find /tmp/SNAPSDK/bin -type f -name 'luci-app-tgws-rs*.apk' -exec cp {} ${GITHUB_WORKSPACE}/artifacts/ \;
+          find /tmp/SNAPSDK/bin -type f -name 'luci-i18n-tgws-rs*.apk' -exec cp {} ${GITHUB_WORKSPACE}/artifacts/ \;
 
       - name: Build with 24.10.3 SDK (.ipk for OpenWrt 23/24)
         id: leg
@@ -65,8 +67,9 @@ jobs:
           echo "CONFIG_PACKAGE_luci-app-tgws-rs=y" > .config
           make defconfig
           make package/luci-app-tgws-rs/compile V=99
-          find bin -type f -name 'luci-app-tgws-rs*.ipk' -exec cp {} artifacts/ \;
-          find bin -type f -name 'luci-i18n-tgws-rs*.ipk' -exec cp {} artifacts/ \;
+          mkdir -p ${GITHUB_WORKSPACE}/artifacts
+          find /tmp/SDK/bin -type f -name 'luci-app-tgws-rs*.ipk' -exec cp {} ${GITHUB_WORKSPACE}/artifacts/ \;
+          find /tmp/SDK/bin -type f -name 'luci-i18n-tgws-rs*.ipk' -exec cp {} ${GITHUB_WORKSPACE}/artifacts/ \;
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
