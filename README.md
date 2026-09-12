@@ -25,7 +25,8 @@ LuCI-интерфейс для **[tg-ws-proxy-rs](https://github.com/valnesfjord
 
 Пакет LuCI **не включает** сам бинарник прокси — он архи-специфичен
 (mipsel / aarch64 / x86_64 / …) и поставляется upstream-проектом.
-Ставьте его отдельно — из готового релиза или собранного из исходников.
+Его можно поставить из вкладки **«Обновление ПО»** прямо в интерфейсе —
+ручная установка не обязательна (см. [ниже](#установка-бинарника-tg-ws-proxy-rs)).
 
 ## Установка
 
@@ -34,7 +35,7 @@ LuCI-интерфейс для **[tg-ws-proxy-rs](https://github.com/valnesfjord
 Скачайте свежий `.apk` со страницы [Releases](../../releases) и выполните:
 
 ```sh
-apk add --allow-untrusted ./luci-app-tgws-rs_1.0.0_1_all.apk
+apk add --allow-untrusted ./luci-app-tgws-rs_1.1.0_1_all.apk
 ```
 
 Чтобы получить русскую локализацию, поставьте также подпакет `luci-i18n-tgws-rs-ru` (собирается вместе с основным .apk).
@@ -42,12 +43,80 @@ apk add --allow-untrusted ./luci-app-tgws-rs_1.0.0_1_all.apk
 ### OpenWrt 24.x и старше (opkg)
 
 ```sh
-opkg install ./luci-app-tgws-rs_1.0.0-r1_all.ipk
-opkg install ./luci-i18n-tgws-rs-ru_1.0.0-r1_all.ipk   # опционально
+opkg install ./luci-app-tgws-rs_1.1.0-r1_all.ipk
+opkg install ./luci-i18n-tgws-rs-ru_1.1.0-r1_all.ipk   # опционально
 ```
 
 После установки в *LuCI → Services* появится пункт **TG WS Proxy**.
 Сгенерируйте секрет (или импортируйте свой) во вкладке «Настройки» и включите службу.
+
+## Установка бинарника tg-ws-proxy-rs
+
+Пакет LuCI работает с бинарником `/usr/bin/tg-ws-proxy` и сам его не содержит.
+Поставить бинарник можно двумя способами.
+
+### Вариант 1 — через вкладку «Обновление ПО» (рекомендуется)
+
+Вручную ничего качать не нужно:
+
+1. Установите этот LuCI-пакет (см. выше) — бинарник при этом не нужен.
+2. Откройте **LuCI → Services → TG WS Proxy → «Обновление ПО»**.
+3. Нажмите **«Установить последнюю версию»**: интерфейс сам определит
+   архитектуру роутера, скачает свежий релиз из
+   [репозитория автора](https://github.com/valnesfjord/tg-ws-proxy-rs/releases)
+   и положит бинарник в `/usr/bin/tg-ws-proxy`.
+
+SSH для этого способа не требуется.
+
+### Вариант 2 — вручную, по SSH
+
+Подойдёт, если нужна конкретная версия или прямое скачивание с GitHub на
+роутере работает плохо.
+
+1. **Зайдите на роутер по SSH.** Как именно — зависит от настроек dropbear
+   на роутере (`/etc/config/dropbear`, ключи `PasswordAuth` /
+   `RootPasswordAuth`):
+
+   - вход по **паролю** root:
+     ```sh
+     ssh root@192.168.1.1
+     ```
+   - вход по **SSH-ключу** (если ключ настроен; пароль root при этом может
+     быть отключён):
+     ```sh
+     ssh -i ~/.ssh/id_rsa root@192.168.1.1
+     ```
+
+2. **Узнайте архитектуру роутера**:
+   ```sh
+   cat /etc/openwrt_release
+   ```
+   Нужна строка `DISTRIB_ARCH` — например `mipsel_24kc`, `aarch64_cortex-a53`
+   или `x86_64`.
+
+3. **Выберите версию у автора**:
+   [страница релизов](https://github.com/valnesfjord/tg-ws-proxy-rs/releases).
+   Архив называется `tg-ws-proxy-<triplet>.tar.gz`, где `<triplet>`
+   соответствует вашей архитектуре: `mipsel` → `mipsel-unknown-linux-musl`,
+   `aarch64` → `aarch64-unknown-linux-musl`,
+   `x86_64` → `x86_64-unknown-linux-musl`,
+   `armv7` → `armv7-unknown-linux-musleabihf`.
+
+4. **Скачайте архив** (пример — релиз v2.3.3, архитектура mipsel):
+   ```sh
+   curl -LO https://github.com/valnesfjord/tg-ws-proxy-rs/releases/download/v2.3.3/tg-ws-proxy-mipsel-unknown-linux-musl.tar.gz
+   ```
+
+5. **Залейте на роутер, распакуйте и поставьте на место**:
+   ```sh
+   scp tg-ws-proxy-mipsel-unknown-linux-musl.tar.gz root@192.168.1.1:/tmp/
+   ssh root@192.168.1.1 'tar -xzf /tmp/tg-ws-proxy-mipsel-unknown-linux-musl.tar.gz -C /tmp && mv /tmp/tg-ws-proxy /usr/bin/tg-ws-proxy && chmod 755 /usr/bin/tg-ws-proxy'
+   ```
+   На Windows вместо `scp`/`ssh` можно использовать PuTTY: `pscp -scp`
+   (загрузка файла) и `plink` (выполнение команды).
+
+После этого бинарник лежит в `/usr/bin/tg-ws-proxy` — во вкладке «Статус»
+появится номер версии, и службу можно запускать.
 
 ## Скриншоты
 
