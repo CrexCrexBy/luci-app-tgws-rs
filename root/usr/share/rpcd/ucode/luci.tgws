@@ -69,7 +69,7 @@ function watchdog_autostart_cron() {
 }
 
 function watchdog_cron_line() {
-	return '*/10 * * * * ' + WD + ' >/dev/null 2>&1';
+	return '*/10 * * * * ' + WD + ' --cron >/dev/null 2>&1';
 }
 
 function q_sh(s) {
@@ -261,6 +261,7 @@ const methods = {
 				has_secret: length(get_uci('secret', '')) > 0,
 				link_ip: get_uci('link_ip', ''),
 				watchdog_enabled: get_uci('watchdog_enabled', '0') == '1',
+				watchdog_interval: get_uci('watchdog_interval', '60'),
 				watchdog_autostart: watchdog_autostart_cron(),
 				watchdog_worker: get_uci('watchdog_worker', '1') == '1',
 				worker_enabled: get_uci('cf_worker_enabled', '0') == '1',
@@ -389,10 +390,9 @@ const methods = {
 			case 'enable':
 				uci.set('tgws', 'settings', 'watchdog_enabled', '1');
 				uci.commit('tgws');
-				if (!watchdog_autostart_cron()) {
-					sys('echo ' + q_sh(watchdog_cron_line()) + ' >> /etc/crontabs/root');
-					sys('/etc/init.d/cron restart >/dev/null 2>&1');
-				}
+				sys("sed -i '/tgws-watchdog/d' /etc/crontabs/root 2>/dev/null");
+				sys('echo ' + q_sh(watchdog_cron_line()) + ' >> /etc/crontabs/root');
+				sys('/etc/init.d/cron restart >/dev/null 2>&1');
 				break;
 			case 'disable':
 				uci.set('tgws', 'settings', 'watchdog_enabled', '0');

@@ -260,6 +260,27 @@ msgstr "Автозапуск сторожа включён"
 msgid "Watchdog enable autostart"
 msgstr "Включить автозапуск сторожа"
 
+msgid "Watchdog check interval"
+msgstr "Интервал проверки сторожа"
+
+msgid "How often the watchdog probes Cloudflare domains when running in the background. Shorter intervals recover faster but restart the service more often."
+msgstr "Как часто сторож проверяет домены Cloudflare в фоне. Меньший интервал быстрее восстанавливает связь, но чаще перезапускает службу."
+
+msgid "10 minutes"
+msgstr "10 минут"
+
+msgid "30 minutes"
+msgstr "30 минут"
+
+msgid "1 hour"
+msgstr "1 час"
+
+msgid "3 hours"
+msgstr "3 часа"
+
+msgid "1 day"
+msgstr "1 день"
+
 msgid "Watchdog log file"
 msgstr "Файл журнала сторожа"
 

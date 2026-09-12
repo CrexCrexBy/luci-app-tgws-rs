@@ -14,8 +14,15 @@
 #   2 — all domains failing (config left as-is)
 #   3 — --check itself failed (binary or network problem)
 #
+# Invocation:
+#   tgws-watchdog            run once immediately (used by the UI buttons)
+#   tgws-watchdog --cron     run only if watchdog_interval minutes elapsed
+#                            since the previous run (used by cron)
+#
 # Config (uci, package tgws, section settings):
-#   watchdog_enabled   '0'|'1'  master switch (default '1')
+#   watchdog_enabled   '0'|'1'  master switch (default '0', opt-in)
+#   watchdog_interval  count    minutes between checks when run from cron
+#                               (default 60)
 #   watchdog_keep      count    max healthy domains to store in cf_domain
 #                               (default 5)
 #   watchdog_log       '0'|'1'  keep a watchdog log file (default '1')
@@ -40,6 +47,11 @@ case "$WD_WORKER" in
     0|false) WD_WORKER=0 ;;
     *)        WD_WORKER=1 ;;
 esac
+WD_INTERVAL="$(uci -q get tgws.settings.watchdog_interval || echo 60)"
+case "$WD_INTERVAL" in
+    ''|*[!0-9]*) WD_INTERVAL=60 ;;
+esac
+WD_STAMP="/tmp/tgws-watchdog.stamp"
 
 log() {
     echo "$(date '+%F %T') $*" >> "$LOGFILE"
@@ -121,10 +133,21 @@ main() {
         log "INFO service disabled, skipping"
         exit 0
     }
-    [ "$(uci -q get tgws.settings.watchdog_enabled || echo 1)" = "1" ] || {
+    [ "$(uci -q get tgws.settings.watchdog_enabled || echo 0)" = "1" ] || {
         log "INFO watchdog disabled, skipping"
         exit 0
     }
+
+    # cron ticks every 10 min; only proceed once watchdog_interval elapsed.
+    # Manual runs (no --cron) always proceed immediately.
+    if [ "$1" = "--cron" ]; then
+        now="$(date +%s)"
+        last=0
+        [ -f "$WD_STAMP" ] && last="$(cat "$WD_STAMP" 2>/dev/null)"
+        case "$last" in ''|*[!0-9]*) last=0 ;; esac
+        [ $((now - last)) -lt $((WD_INTERVAL * 60)) ] && exit 0
+    fi
+    date +%s > "$WD_STAMP" 2>/dev/null
 
     local out rc ok fail okdom=""
 

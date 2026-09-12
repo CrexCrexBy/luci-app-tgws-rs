@@ -444,6 +444,13 @@ return view.extend({
 		o.depends('cf_worker_enabled', '1');
 		o.placeholder = 'tg-ws-proxy.example.workers.dev';
 		o = s.taboption('settings', form.Flag, 'watchdog_worker', _('Watchdog manages worker'), _('Let the watchdog automatically enable or disable the Cloudflare worker based on its health. Disable to keep manual control.'));
+		o = s.taboption('settings', form.ListValue, 'watchdog_interval', _('Watchdog check interval'), _('How often the watchdog probes Cloudflare domains when running in the background. Shorter intervals recover faster but restart the service more often.'));
+		o.value('10', _('10 minutes'));
+		o.value('30', _('30 minutes'));
+		o.value('60', _('1 hour'));
+		o.value('180', _('3 hours'));
+		o.value('1440', _('1 day'));
+		o.default = '60';
 		o = s.taboption('settings', form.Value, 'buf_kb', _('Buffer size (KB)'), _('Socket buffer size in kilobytes.'));
 		o.placeholder = '256';
 		o.datatype = 'uinteger';
