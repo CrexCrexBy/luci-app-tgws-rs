@@ -1,80 +1,91 @@
 # luci-app-tgws-rs
 
-LuCI web interface for **[tg-ws-proxy-rs](https://github.com/valnesfjord/tg-ws-proxy-rs)** — a Telegram WebSocket proxy written in Rust.
+> **English:** [ReadMe in English](README.en.md)
 
-The UI lets you manage the proxy right from the router web panel: status, settings (including Cloudflare / worker mode), software updates straight from the GitHub releases, logs and an automatic Cloudflare-domain watchdog.
+LuCI-интерфейс для **[tg-ws-proxy-rs](https://github.com/valnesfjord/tg-ws-proxy-rs)** — Telegram WebSocket-прокси, написанного на Rust.
 
-![Overview](screenshots/overview.webp)
+Веб-морда позволяет управлять прокси прямо из панели роутера: статус, настройки (включая режимы Cloudflare / worker), обновление прямо из GitHub-релизов, логи и автономный ватчдог за Cloudflare-доменами.
 
-## Features
+![Обзор](screenshots/overview.webp)
 
-- **Status tab** — service running state, current version, quick Start / Stop / Restart / auto-start toggle
-- **Settings** — host, port, secret (auto-generated with QR + `tg://proxy` link), connection link, DC IP overrides, buffer/pool tuning
-- **Cloudflare mode** — custom proxy domain, built-in domain list, worker domain with automatic health toggle, connection balancing
-- **Software Update** — checks the upstream GitHub repository and installs new releases directly to the router (**Rust binary is fetched separately**, see below), with version rollback
-- **Logs** — live service log with time stamping, verbosity switch, watchdog log
-- **Watchdog** — probes Cloudflare domains via cron, keeps only healthy ones, auto-restarts the service on regressions
-- **Russian translation** included
+## Возможности
 
-## Requirements
+- **Вкладка «Статус»** — состояние службы, текущая версия, кнопки Запуск / Остановка / Перезапуск / автозапуск
+- **Настройки** — хост, порт, секрет (автогенерация с QR и ссылкой `tg://proxy`), ссылка подключения, переопределение DC-IP, тюнинг буфера/пула
+- **Режим Cloudflare** — свой домен-прокси, встроенный список доменов, worker-домен с автоматическим переключением по здоровью, балансировка соединений
+- **Обновление ПО** — проверяет upstream-репозиторий на GitHub и ставит новые релизы прямо на роутер (**Rust-бинарник подтягивается отдельно**, см. ниже), с откатом версии
+- **Логи** — живой лог службы со временными метками, переключатель детализации, лог ватчдога
+- **Ватчдог** — через cron прозванивает Cloudflare-домены, оставляет только здоровые, автоматически перезапускает службу при деградации
+- **Есть русский перевод**
 
-- OpenWrt **25.x** (apk) or **24.x / 23.x** (opkg) — LuCI web interface
-- **[tg-ws-proxy-rs](https://github.com/valnesfjord/tg-ws-proxy-rs)** binary installed at `/usr/bin/tg-ws-proxy`
+## Требования
 
-The LuCI package **does not include** the proxy binary itself — it is arch-specific
-(mipsel / aarch64 / x86_64 / …) and is delivered by the upstream project.
-Install it separately either from a prebuilt release or a built-from-source binary.
+- OpenWrt **25.x** (apk) или **24.x / 23.x** (opkg) — веб-интерфейс LuCI
+- Бинарник **[tg-ws-proxy-rs](https://github.com/valnesfjord/tg-ws-proxy-rs)** в `/usr/bin/tg-ws-proxy`
 
-## Installation
+Пакет LuCI **не включает** сам бинарник прокси — он архи-специфичен
+(mipsel / aarch64 / x86_64 / …) и поставляется upstream-проектом.
+Ставьте его отдельно — из готового релиза или собранного из исходников.
+
+## Установка
 
 ### OpenWrt 25.x (apk)
 
-Download the latest `.apk` from the [Releases page](../../releases) and run:
+Скачайте свежий `.apk` со страницы [Releases](../../releases) и выполните:
 
 ```sh
 apk add --allow-untrusted ./luci-app-tgws-rs_1.0.0_1_all.apk
 ```
 
-To also get the Russian localization, install the matching `luci-i18n-tgws-rs-ru` package (built alongside the main .apk).
+Чтобы получить русскую локализацию, поставьте также подпакет `luci-i18n-tgws-rs-ru` (собирается вместе с основным .apk).
 
-### OpenWrt 24.x and older (opkg)
+### OpenWrt 24.x и старше (opkg)
 
 ```sh
 opkg install ./luci-app-tgws-rs_1.0.0-r1_all.ipk
-opkg install ./luci-i18n-tgws-rs-ru_1.0.0-r1_all.ipk   # optional
+opkg install ./luci-i18n-tgws-rs-ru_1.0.0-r1_all.ipk   # опционально
 ```
 
-After installation the **TG WS Proxy** entry appears under *LuCI → Services*.
-Generate a secret (or import your existing one) in the Settings tab and enable the service.
+После установки в *LuCI → Services* появится пункт **TG WS Proxy**.
+Сгенерируйте секрет (или импортируйте свой) во вкладке «Настройки» и включите службу.
 
-## Screenshots
+## Скриншоты
 
-> Screenshots go here (drop your PNG files into `screenshots/`):
+![Статус](screenshots/overview.webp)
+![Настройки](screenshots/settings.webp)
+![Обновление ПО](screenshots/update.webp)
+![Логи](screenshots/logs.webp)
 
+<<<<<<< HEAD
 ![Status page](screenshots/overview.webp)
 ![Settings](screenshots/settings.webp)
 ![Software Update](screenshots/update.webp)
 ![Logs](screenshots/logs.webp)
+=======
+## Сборка из исходников
+>>>>>>> 84c4b8e (README: RU main + EN separate with cross-links, webp screenshots)
 
-## Building from source
+Пакеты собираются автоматически в GitHub Actions ([`.github/workflows/build.yml`](.github/workflows/build.yml))
+по каждому тегу `v*` — оба формата (OpenWrt 25 `.apk` и 23/24 `.ipk`) публикуются на
+странице [Releases](../../releases).
 
-The packages are built automatically by GitHub Actions ([`.github/workflows/build.yml`](.github/workflows/build.yml))
-on every `v*` tag — both OpenWrt 25 `.apk` and 23/24 `.ipk` are published to the
-[Releases page](../../releases).
-
-To build manually with the OpenWrt SDK:
+Ручная сборка через OpenWrt SDK:
 
 ```sh
-# 1. clone the luci feed, place this package under package/luci-app-tgws-rs
-# 2. in the SDK / buildroot:
+# 1. склонируйте feed luci, положите пакет в package/luci-app-tgws-rs
+# 2. в SDK / buildroot:
 ./scripts/feeds install luci-app-tgws-rs
 echo "CONFIG_PACKAGE_luci-app-tgws-rs=y" > .config
 make defconfig
 make package/luci-app-tgws-rs/compile
 ```
 
-The package is arch-independent (`PKGARCH:=all`) — one file works for every router architecture.
+Пакет не зависит от архитектуры (`PKGARCH:=all`) — один файл подходит для любого роутера.
 
-## License
+## Лицензия
 
+<<<<<<< HEAD
 Apache-2.0 — see [LICENSE](LICENSE).
+=======
+Apache-2.0 — см. [LICENSE](LICENSE).
+>>>>>>> 84c4b8e (README: RU main + EN separate with cross-links, webp screenshots)
