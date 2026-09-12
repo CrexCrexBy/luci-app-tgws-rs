@@ -56,14 +56,7 @@ opkg install ./luci-i18n-tgws-rs-ru_1.0.0-r1_all.ipk   # опционально
 ![Обновление ПО](screenshots/update.webp)
 ![Логи](screenshots/logs.webp)
 
-<<<<<<< HEAD
-![Status page](screenshots/overview.webp)
-![Settings](screenshots/settings.webp)
-![Software Update](screenshots/update.webp)
-![Logs](screenshots/logs.webp)
-=======
 ## Сборка из исходников
->>>>>>> 84c4b8e (README: RU main + EN separate with cross-links, webp screenshots)
 
 Пакеты собираются автоматически в GitHub Actions ([`.github/workflows/build.yml`](.github/workflows/build.yml))
 по каждому тегу `v*` — оба формата (OpenWrt 25 `.apk` и 23/24 `.ipk`) публикуются на
@@ -84,8 +77,8 @@ make package/luci-app-tgws-rs/compile
 
 ## Лицензия
 
-<<<<<<< HEAD
-Apache-2.0 — see [LICENSE](LICENSE).
-=======
 Apache-2.0 — см. [LICENSE](LICENSE).
->>>>>>> 84c4b8e (README: RU main + EN separate with cross-links, webp screenshots)
+
+## О проекте
+
+Веб-морда написана с помощью **vibecoding** (внеурочный ИИ-кодинг, итеративно, с проверкой на реальном железе).

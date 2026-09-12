@@ -78,3 +78,7 @@ The package is arch-independent (`PKGARCH:=all`) — one file works for every ro
 ## License
 
 Apache-2.0 — see [LICENSE](LICENSE).
+
+## About
+
+This web UI was written with **vibecoding** (AI-assisted iterative coding, validated on real hardware).
