@@ -14,7 +14,7 @@ LUCI_DESCRIPTION:=LuCI web interface for the tg-ws-proxy-rs Telegram WebSocket p
 
 PKG_LICENSE:=Apache-2.0
 PKG_LICENSE_FILES:=LICENSE
-PKG_MAINTAINER:=<Add your name/email here>
+PKG_MAINTAINER:=CrexCrexBy <11130582+CrexCrexBy@users.noreply.github.com>
 PKG_VERSION:=1.0.0
 PKG_RELEASE:=1
 

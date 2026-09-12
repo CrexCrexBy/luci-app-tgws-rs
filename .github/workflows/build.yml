@@ -32,12 +32,12 @@ jobs:
           curl -SLk --connect-timeout 30 --retry 2 "$url" -o /tmp/SNAPSDK.tar.zst
           zstd -d /tmp/SNAPSDK.tar.zst -o /tmp/SNAPSDK.tar
           tar xf /tmp/SNAPSDK.tar --strip-components=1 -C /tmp/SNAPSDK
-          mkdir -p /tmp/SNAPSDK/package/luci-app-tgws-rs
-          rsync -avh --exclude='.git' --exclude='.github' . \
-            /tmp/SNAPSDK/package/luci-app-tgws-rs/
           cd /tmp/SNAPSDK
           ./scripts/feeds update -a
-          ./scripts/feeds install luci-app-tgws-rs
+          mkdir -p feeds/luci/applications/luci-app-tgws-rs
+          rsync -avh --exclude='.git' --exclude='.github' /home/runner/work/luci-app-tgws-rs/luci-app-tgws-rs/ \
+            feeds/luci/applications/luci-app-tgws-rs/
+          ./scripts/feeds install -a
           echo "CONFIG_PACKAGE_luci-app-tgws-rs=y" > .config
           make defconfig
           make package/luci-app-tgws-rs/compile V=99
@@ -54,12 +54,12 @@ jobs:
             -o /tmp/SDK.tar.zst
           zstd -d /tmp/SDK.tar.zst -o /tmp/SDK.tar
           tar xf /tmp/SDK.tar --strip-components=1 -C /tmp/SDK
-          mkdir -p /tmp/SDK/package/luci-app-tgws-rs
-          rsync -avh --exclude='.git' --exclude='.github' . \
-            /tmp/SDK/package/luci-app-tgws-rs/
           cd /tmp/SDK
           ./scripts/feeds update -a
-          ./scripts/feeds install luci-app-tgws-rs
+          mkdir -p feeds/luci/applications/luci-app-tgws-rs
+          rsync -avh --exclude='.git' --exclude='.github' /home/runner/work/luci-app-tgws-rs/luci-app-tgws-rs/ \
+            feeds/luci/applications/luci-app-tgws-rs/
+          ./scripts/feeds install -a
           echo "CONFIG_PACKAGE_luci-app-tgws-rs=y" > .config
           make defconfig
           make package/luci-app-tgws-rs/compile V=99
