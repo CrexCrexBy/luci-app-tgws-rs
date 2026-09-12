@@ -37,6 +37,7 @@ jobs:
           mkdir -p feeds/luci/applications/luci-app-tgws-rs
           rsync -avh --exclude='.git' --exclude='.github' /home/runner/work/luci-app-tgws-rs/luci-app-tgws-rs/ \
             feeds/luci/applications/luci-app-tgws-rs/
+          ./scripts/feeds update -a
           ./scripts/feeds install -a
           echo "CONFIG_PACKAGE_luci-app-tgws-rs=y" > .config
           make defconfig
@@ -59,6 +60,7 @@ jobs:
           mkdir -p feeds/luci/applications/luci-app-tgws-rs
           rsync -avh --exclude='.git' --exclude='.github' /home/runner/work/luci-app-tgws-rs/luci-app-tgws-rs/ \
             feeds/luci/applications/luci-app-tgws-rs/
+          ./scripts/feeds update -a
           ./scripts/feeds install -a
           echo "CONFIG_PACKAGE_luci-app-tgws-rs=y" > .config
           make defconfig
