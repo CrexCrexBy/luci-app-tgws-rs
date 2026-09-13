@@ -281,8 +281,8 @@ msgstr "3 часа"
 msgid "1 day"
 msgstr "1 день"
 
-msgid "Watchdog log file"
-msgstr "Файл журнала сторожа"
+msgid "Path to the watchdog log file"
+msgstr "Путь к файлу журнала сторожа"
 
 msgid "Watchdog logging"
 msgstr "Журнал сторожа"

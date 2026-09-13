@@ -444,7 +444,7 @@ return view.extend({
 		o = s.taboption('logs', logPanel, '__logs__');
 		o.depends('verbose', '1');
 		o = s.taboption('logs', form.Flag, 'watchdog_log', _('Watchdog logging'), _('Keep a separate log file for the domain watchdog.'));
-		o = s.taboption('logs', form.Value, 'watchdog_log_file', _('Watchdog log file'), _('Path to the watchdog log file. The file is created automatically on the first watchdog run.'));
+		o = s.taboption('logs', form.Value, 'watchdog_log_file', _('Path to the watchdog log file'), _('Path to the watchdog log file. The file is created automatically on the first watchdog run.'));
 		o.placeholder = '/var/log/tgws-watchdog.log';
 		o.depends('watchdog_log', '1');
 		o = s.taboption('logs', watchdogLogPanel, '__wdlog__');
