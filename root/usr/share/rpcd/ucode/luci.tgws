@@ -59,7 +59,7 @@ function get_uci(k, def) {
 	return (v == null) ? def : v;
 }
 
-let LOG_DEFAULT = '/var/log/tg-ws-proxy.log';
+let LOG_DEFAULT = '/var/log/tgws.log';
 
 const WD = '/usr/bin/tgws-watchdog';
 let WD_LOG_DEFAULT = '/var/log/tgws-watchdog.log';
@@ -290,7 +290,7 @@ const methods = {
 				buf_kb:           get_uci('buf_kb', '256'),
 				pool_size:        get_uci('pool_size', '4'),
 				verbose:          get_uci('verbose', '0') == '1',
-				log_file:         get_uci('log_file', '')
+				log_file:         get_uci('log_file', LOG_DEFAULT)
 			};
 		}
 	},
@@ -512,7 +512,7 @@ const methods = {
 			if (lines > 500) lines = 500;
 
 			if (!verbose)
-				return { logs: '=== Verbose logging is disabled. Enable it in Advanced Settings. ===' };
+				return { logs: '=== Main log is disabled. Enable it in the Logs tab. ===' };
 
 			if (!access(log_file)) {
 				let dir = '/';

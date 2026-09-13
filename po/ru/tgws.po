@@ -107,8 +107,8 @@ msgstr "Порт прослушивания"
 msgid "Logs"
 msgstr "Журналы"
 
-msgid "Main log file"
-msgstr "Основной файл журнала"
+msgid "Path to the main log file"
+msgstr "Путь к основному файлу журнала"
 
 msgid "Max log file size"
 msgstr "Максимальный размер журнала"
@@ -245,8 +245,8 @@ msgstr "Использовать имя роутера в ссылках"
 msgid "Use the Cloudflare route as the primary one."
 msgstr "Использовать маршрут через Cloudflare как основной."
 
-msgid "Verbose logging"
-msgstr "Подробный журнал"
+msgid "Main log"
+msgstr "Основной журнал"
 
 msgid "Version"
 msgstr "Версия"
@@ -317,8 +317,8 @@ msgstr "Worker ВЫКЛ"
 msgid "Worker ON"
 msgstr "Worker ВКЛ"
 
-msgid "Write detailed log output to the log file."
-msgstr "Записывать подробные сведения в файл журнала."
+msgid "Write detailed log output to the main log file."
+msgstr "Записывать подробные сведения в основной файл журнала."
 
 msgid "TG WS Proxy"
 msgstr "Прокси TG WS"

@@ -127,6 +127,7 @@ main() {
 
     trim_log "$LOGFILE"
     main_log="$(uci -q get tgws.settings.log_file)"
+    [ -z "$main_log" ] && main_log="/var/log/tgws.log"
     [ -n "$main_log" ] && trim_log "$main_log"
 
     [ "$(uci -q get tgws.settings.enabled)" = "1" ] || {

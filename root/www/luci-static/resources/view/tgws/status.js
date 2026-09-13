@@ -434,11 +434,11 @@ return view.extend({
 		o.depends('cf_enabled', '1');
 		o = s.taboption('settings', form.Flag, 'cf_balance', _('Balance connections across Cloudflare domains'), _('Round-robin across multiple Cloudflare proxy domains instead of always trying the same one first.'));
 		o.depends('cf_enabled', '1');
-		o = s.taboption('settings', form.Flag, 'cf_worker_enabled', _('Use Cloudflare worker'), _('Enable the Cloudflare worker route. Toggled automatically by the watchdog based on worker health.'));
-		o.depends('cf_enabled', '1');
 		o = s.taboption('settings', form.Value, 'cf_domain', _('Cloudflare proxy domains (auto)'), _('Automatically filled by the watchdog from its health checks (healthy-then-fallback order). Read-only — to manage manually, stop the watchdog first.'));
 		o.placeholder = 'yourdomain.com';
 		o.readonly = true;
+		o.depends('cf_enabled', '1');
+		o = s.taboption('settings', form.Flag, 'cf_worker_enabled', _('Use Cloudflare worker'), _('Enable the Cloudflare worker route. Toggled automatically by the watchdog based on worker health.'));
 		o.depends('cf_enabled', '1');
 		o = s.taboption('settings', form.Value, 'cf_worker_domain', _('Cloudflare worker domain'), _('The worker domain used for the Cloudflare route.'));
 		o.depends('cf_worker_enabled', '1');
@@ -460,9 +460,9 @@ return view.extend({
 
 		s.taboption('update', updatePanel, '__update__');
 
-		o = s.taboption('logs', form.Flag, 'verbose', _('Verbose logging'), _('Write detailed log output to the log file.'));
-		o = s.taboption('logs', form.Value, 'log_file', _('Main log file'), _('Path to the log file used by the proxy.'));
-		o.placeholder = '/var/log/tg-ws-proxy.log';
+		o = s.taboption('logs', form.Flag, 'verbose', _('Main log'), _('Write detailed log output to the main log file.'));
+		o = s.taboption('logs', form.Value, 'log_file', _('Path to the main log file'), _('Path to the log file used by the proxy.'));
+		o.placeholder = '/var/log/tgws.log';
 		o.depends('verbose', '1');
 		o = s.taboption('logs', logPanel, '__logs__');
 		o.depends('verbose', '1');
