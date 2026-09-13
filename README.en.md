@@ -26,97 +26,137 @@ The UI lets you manage the proxy right from the router web panel: status, settin
 The LuCI package **does not include** the proxy binary itself — it is arch-specific
 (mipsel / aarch64 / x86_64 / …) and is delivered by the upstream project.
 It can be installed from the **Software Update** tab right in the web UI —
-manual installation is optional (see [below](#installing-the-tg-ws-proxy-rs-binary)).
+manual installation is optional (see [Installation](#installation)).
 
 ## Installation
 
-### OpenWrt 25.x (apk)
+Install the LuCI package, then the proxy binary itself via the **"Software Update"** tab.
 
-Download the latest `.apk` from the [Releases page](../../releases) and run:
+### 1. Install the web UI
 
-```sh
-apk add --allow-untrusted ./luci-app-tgws-rs_1.1.0_1_all.apk
-```
+Download fresh files from the [Releases page](../../releases).
 
-To also get the Russian localization, install the matching `luci-i18n-tgws-rs-ru` package (built alongside the main .apk).
-
-### OpenWrt 24.x and older (opkg)
+**OpenWrt 25.x (apk):**
 
 ```sh
-opkg install ./luci-app-tgws-rs_1.1.0-r1_all.ipk
-opkg install ./luci-i18n-tgws-rs-ru_1.1.0-r1_all.ipk   # optional
+apk add --allow-untrusted ./luci-app-tgws-rs-1.1.2-r1.apk
+apk add --allow-untrusted ./luci-i18n-tgws-rs-ru-0.apk   # Russian translation, optional
 ```
+
+**OpenWrt 23.x / 24.x (ipk/opkg):**
+
+```sh
+opkg install ./luci-app-tgws-rs_1.1.2-r1_all.ipk
+opkg install ./luci-i18n-tgws-rs-ru_0_all.ipk            # Russian translation, optional
+```
+
+Use the actual versions from the release in the commands.
 
 After installation the **TG WS Proxy** entry appears under *LuCI → Services*.
+
+### 2. Install the proxy binary
+
+Open **LuCI → Services → TG WS Proxy → "Software Update"** and click **"Install the latest version"**. The UI detects the router architecture, downloads the matching release from the [author's repository](https://github.com/valnesfjord/tg-ws-proxy-rs/releases) and puts the binary into `/usr/bin/tg-ws-proxy`. SSH is not needed.
+
+### 3. Enable the service
+
 Generate a secret (or import your existing one) in the Settings tab and enable the service.
 
-## Installing the tg-ws-proxy-rs binary
+## Manual installation
 
-The LuCI package works with the `/usr/bin/tg-ws-proxy` binary and does not
-ship it. There are two ways to install it.
+Use this if you need a specific binary version or direct GitHub downloads from the router work poorly — install the binary manually, then the web UI.
 
-### Option 1 — via the "Software Update" tab (recommended)
+### 1. Check the router architecture
 
-No manual downloading:
+```sh
+cat /etc/openwrt_release
+```
 
-1. Install this LuCI package (see above) — the binary is not required for that.
-2. Open **LuCI → Services → TG WS Proxy → "Software Update"** tab.
-3. Click **"Install the latest version"**: the UI detects the router
-   architecture, downloads the newest release from the
-   [author's repository](https://github.com/valnesfjord/tg-ws-proxy-rs/releases)
-   and puts the binary into `/usr/bin/tg-ws-proxy`.
+Look for the `DISTRIB_ARCH` line, e.g. `mipsel_24kc`, `aarch64_cortex-a53` or `x86_64`.
 
-No SSH needed for this option.
+### 2. Download the binary for your architecture
 
-### Option 2 — manually over SSH
+Pick a version on the [author's releases page](https://github.com/valnesfjord/tg-ws-proxy-rs/releases). The archive is named `tg-ws-proxy-<triplet>.tar.gz`, where `<triplet>` matches your architecture:
 
-Use this if you need a specific version or direct GitHub downloads from the
-router work poorly.
+| DISTRIB_ARCH | triplet in the archive name |
+|---|---|
+| `mipsel_24kc` | `mipsel-unknown-linux-musl` |
+| `aarch64_cortex-a53` | `aarch64-unknown-linux-musl` |
+| `x86_64` | `x86_64-unknown-linux-musl` |
+| `armv7` | `armv7-unknown-linux-musleabihf` |
 
-1. **Log in to the router over SSH.** Which method works depends on the
-   router's dropbear settings (`/etc/config/dropbear`, `PasswordAuth` /
-   `RootPasswordAuth` options):
+Example — release v2.3.3, mipsel architecture:
 
-   - with the root **password**:
-     ```sh
-     ssh root@192.168.1.1
-     ```
-   - with an **SSH key** (if you set a key up; the root password may then be
-     disabled):
-     ```sh
-     ssh -i ~/.ssh/id_rsa root@192.168.1.1
-     ```
+```sh
+curl -LO https://github.com/valnesfjord/tg-ws-proxy-rs/releases/download/v2.3.3/tg-ws-proxy-mipsel-unknown-linux-musl.tar.gz
+```
 
-2. **Check the router architecture**:
-   ```sh
-   cat /etc/openwrt_release
-   ```
-   Look for the `DISTRIB_ARCH` line, e.g. `mipsel_24kc`, `aarch64_cortex-a53`
-   or `x86_64`.
+### 3. Upload to the router and extract
 
-3. **Pick a version from the author**:
-   [releases page](https://github.com/valnesfjord/tg-ws-proxy-rs/releases).
-   The archive is named `tg-ws-proxy-<triplet>.tar.gz`, where `<triplet>`
-   matches your architecture: `mipsel` → `mipsel-unknown-linux-musl`,
-   `aarch64` → `aarch64-unknown-linux-musl`,
-   `x86_64` → `x86_64-unknown-linux-musl`,
-   `armv7` → `armv7-unknown-linux-musleabihf`.
+```sh
+scp tg-ws-proxy-mipsel-unknown-linux-musl.tar.gz root@192.168.1.1:/tmp/
+ssh root@192.168.1.1 'tar -xzf /tmp/tg-ws-proxy-mipsel-unknown-linux-musl.tar.gz -C /tmp && mv /tmp/tg-ws-proxy /usr/bin/tg-ws-proxy && chmod 755 /usr/bin/tg-ws-proxy'
+```
 
-4. **Download the archive** (example: release v2.3.3, mipsel architecture):
-   ```sh
-   curl -LO https://github.com/valnesfjord/tg-ws-proxy-rs/releases/download/v2.3.3/tg-ws-proxy-mipsel-unknown-linux-musl.tar.gz
-   ```
+On Windows use PuTTY instead: `pscp -scp` (file upload) and `plink` (running commands).
 
-5. **Upload it to the router, extract and install**:
-   ```sh
-   scp tg-ws-proxy-mipsel-unknown-linux-musl.tar.gz root@192.168.1.1:/tmp/
-   ssh root@192.168.1.1 'tar -xzf /tmp/tg-ws-proxy-mipsel-unknown-linux-musl.tar.gz -C /tmp && mv /tmp/tg-ws-proxy /usr/bin/tg-ws-proxy && chmod 755 /usr/bin/tg-ws-proxy'
-   ```
-   On Windows you can use PuTTY instead: `pscp -scp` (file upload) and `plink`
-   (running commands).
+### 4. Install the web UI
 
-The binary is now at `/usr/bin/tg-ws-proxy` — the Status tab will show its
-version, and you can start the service.
+Install the LuCI package following the [Installation](#installation) section. If it is already installed — nothing else is needed: the Status tab will show the version, and you can start the service.
+
+## How the watchdog works
+
+Cloudflare domains for the proxy don't live forever: providers periodically
+block them, and if the proxy relies on a single domain — the connection drops.
+The watchdog handles this automatically:
+
+- Every **check interval** (`watchdog_interval`, 60 minutes by default) it runs
+  from cron and probes every Cloudflare domain in the list via
+  `tg-ws-proxy --check`.
+- **Healthy domains are saved** into `settings.cf_domain` (in "healthy first,
+  fallback after" order, at most `watchdog_keep` entries) so the proxy
+  load-balances across live domains.
+- If the healthy set **changed or some domains started failing** — the watchdog
+  restarts the service to restore connectivity.
+- The **worker domain is probed separately**, and the "Use Cloudflare worker"
+  flag is auto-toggled based on its availability (when "Watchdog manages
+  worker" is enabled).
+- If **all domains fail at once** — the config is left untouched (the last
+  working set stays), so the proxy never ends up without any domain.
+
+All of this is done by the `/usr/bin/tgws-watchdog` script; its activity is
+written to a separate watchdog log (Logs tab), while the interval and limits
+are configured in the Settings tab.
+
+## Cloudflare Worker
+
+A worker is a free piece of "edge code" on Cloudflare (URL of the form
+`<name>.workers.dev`). It hides the WebSocket proxy behind Cloudflare's
+infrastructure: no own domain needed, the router IP stays hidden, and blocks
+of plain CDN domains by Telegram do not affect it.
+
+### How to get it for free
+
+1. Sign up at [Cloudflare](https://dash.cloudflare.com)
+   (free plan = 100,000 requests per day, more than enough for a proxy).
+2. In the dashboard: **Workers & Pages → Create → Create Worker → Deploy**.
+3. Paste the worker code from the
+   [tg-ws-proxy-rs](https://github.com/valnesfjord/tg-ws-proxy-rs) repository
+   (the author ships a ready-made worker file) and save it.
+4. Copy the `https://<name>.workers.dev` address and put it into the
+   **"Cloudflare worker domain"** field in the Settings tab.
+
+### Naming recommendation
+
+The worker gets a public name `<whatever-you-picked>.workers.dev`, and it is
+visible from the outside. To stay under the radar:
+
+- **Avoid** words like `proxy`, `telegram`, `tunnel`, `vpn`, `ws` — such names
+  are recognized instantly.
+- Use a **neutral, everyday name**: `status`, `assets`, `cache`, `cdn-helper`,
+  `geo-responder`, etc.
+- Don't recreate the worker too often — frequent recreations look suspicious
+  by themselves.
 
 ## Screenshots
 
@@ -150,4 +190,4 @@ Apache-2.0 — see [LICENSE](LICENSE).
 
 ## About
 
-This web UI was written with **vibecoding** (AI-assisted iterative coding, validated on real hardware).
+This web UI was written with **vibecoding** (AI-assisted iterative coding, validated on real hardware and OpenWrt 25.12.5).
