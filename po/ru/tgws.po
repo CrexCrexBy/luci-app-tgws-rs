@@ -215,17 +215,17 @@ msgstr "Прокси Telegram WebSocket"
 msgid "A Rust-based WebSocket proxy for Telegram with Cloudflare support."
 msgstr "WebSocket-прокси для Telegram на Rust с поддержкой Cloudflare."
 
-msgid "TGWS Auto-start disabled"
-msgstr "Автозапуск TGWS отключён"
+msgid "TGWS: autostart off"
+msgstr "TGWS: нет автозапуска"
 
-msgid "TGWS Auto-start enabled"
-msgstr "Автозапуск TGWS включён"
+msgid "TGWS: autostart on"
+msgstr "TGWS: автозапуск"
 
-msgid "TGWS Running"
-msgstr "TGWS запущен"
+msgid "TGWS: running"
+msgstr "TGWS: работает"
 
-msgid "TGWS Stopped"
-msgstr "TGWS остановлен"
+msgid "TGWS: stopped"
+msgstr "TGWS: остановлен"
 
 msgid "The worker domain used for the Cloudflare route."
 msgstr "Домен Worker для маршрута через Cloudflare."
@@ -290,9 +290,6 @@ msgstr "Журнал сторожа"
 msgid "Watchdog manages worker"
 msgstr "Сторож управляет Worker"
 
-msgid "Watchdog Running"
-msgstr "Сторож запущен"
-
 msgid "Watchdog start"
 msgstr "Запустить сторожа"
 
@@ -301,21 +298,6 @@ msgstr "Остановить сторожа"
 
 msgid "Watchdog stop autostart"
 msgstr "Отключить автозапуск сторожа"
-
-msgid "Watchdog Stopped"
-msgstr "Сторож остановлен"
-
-msgid "Watchdog toggles worker"
-msgstr "Сторож переключает Worker"
-
-msgid "Worker managed manually"
-msgstr "Worker управляется вручную"
-
-msgid "Worker OFF"
-msgstr "Worker ВЫКЛ"
-
-msgid "Worker ON"
-msgstr "Worker ВКЛ"
 
 msgid "Write detailed log output to the main log file."
 msgstr "Записывать подробные сведения в основной файл журнала."

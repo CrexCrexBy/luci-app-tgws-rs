@@ -58,28 +58,11 @@ function statusBadge(label, active) {
 }
 
 function tgwsBadge(running) {
-	return statusBadge(running ? _('TGWS Running') : _('TGWS Stopped'), running);
+	return statusBadge(running ? _('TGWS: running') : _('TGWS: stopped'), running);
 }
 
 function tgwsAutostartBadge(enabled) {
-	return statusBadge(enabled ? _('TGWS Auto-start enabled') : _('TGWS Auto-start disabled'), enabled);
-}
-
-function watchdogBadge(running) {
-	return statusBadge(running ? _('Watchdog Running') : _('Watchdog Stopped'), running);
-}
-
-function watchdogAutostartBadge(enabled) {
-	return statusBadge(enabled ? _('Watchdog Auto-start enabled') : _('Watchdog Auto-start disabled'), enabled);
-}
-
-function workerBadge(enabled, domain) {
-	if (!domain) return null;
-	return statusBadge(enabled ? _('Worker ON') : _('Worker OFF'), enabled);
-}
-
-function watchdogWorkerBadge(enabled) {
-	return statusBadge(enabled ? _('Watchdog toggles worker') : _('Worker managed manually'), enabled);
+	return statusBadge(enabled ? _('TGWS: autostart on') : _('TGWS: autostart off'), enabled);
 }
 
 var secretField = form.Value.extend({
@@ -129,14 +112,8 @@ return view.extend({
 				return;
 			var badges = [
 				tgwsBadge(s.running),
-				tgwsAutostartBadge(s.enabled),
-				watchdogBadge(s.watchdog_enabled),
-				watchdogAutostartBadge(s.watchdog_autostart)
+				tgwsAutostartBadge(s.enabled)
 			];
-			if (s.worker_domain) {
-				badges.push(workerBadge(s.worker_enabled, s.worker_domain));
-				badges.push(watchdogWorkerBadge(s.watchdog_worker));
-			}
 			dom.content(h2badges, badges);
 		};
 
